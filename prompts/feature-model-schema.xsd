@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Concrete syntax: FeatureIDE-compatible feature model XML. -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified" attributeFormDefault="unqualified">
+
+  <!-- A leaf feature. -->
+  <xs:complexType name="featureType">
+    <xs:sequence>
+      <xs:element name="description" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="name"      type="xs:string"  use="required"/>
+    <xs:attribute name="abstract"  type="xs:boolean" use="optional"/>
+    <xs:attribute name="mandatory" type="xs:boolean" use="optional"/>
+  </xs:complexType>
+
+  <!-- A feature with children. The element name fixes how they are grouped. -->
+  <xs:complexType name="groupType">
+    <xs:sequence>
+      <xs:element name="description" type="xs:string" minOccurs="0"/>
+      <xs:group ref="node" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="name"      type="xs:string"  use="required"/>
+    <xs:attribute name="abstract"  type="xs:boolean" use="optional"/>
+    <xs:attribute name="mandatory" type="xs:boolean" use="optional"/>
+  </xs:complexType>
+
+  <xs:group name="node">
+    <xs:choice>
+      <xs:element name="feature" type="featureType"/>
+      <xs:element name="and"     type="groupType"/>
+      <xs:element name="or"      type="groupType"/>
+      <xs:element name="alt"     type="groupType"/>
+    </xs:choice>
+  </xs:group>
+
+  <!-- Cross-tree constraints as propositional formulas. -->
+  <xs:group name="formula">
+    <xs:choice>
+      <xs:element name="conj" type="binaryFormulaType"/>
+      <xs:element name="disj" type="binaryFormulaType"/>
+      <xs:element name="imp"  type="binaryFormulaType"/>
+      <xs:element name="eq"   type="binaryFormulaType"/>
+      <xs:element name="not"  type="unaryFormulaType"/>
+      <xs:element name="var"  type="xs:string"/>
+    </xs:choice>
+  </xs:group>
+  <xs:complexType name="binaryFormulaType">
+    <xs:choice minOccurs="2" maxOccurs="2"><xs:group ref="formula"/></xs:choice>
+  </xs:complexType>
+  <xs:complexType name="unaryFormulaType">
+    <xs:choice minOccurs="1" maxOccurs="1"><xs:group ref="formula"/></xs:choice>
+  </xs:complexType>
+
+  <xs:element name="featureModel">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="properties"   minOccurs="0"/>
+        <xs:element name="struct">
+          <xs:complexType><xs:group ref="node"/></xs:complexType>
+        </xs:element>
+        <xs:element name="constraints" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="rule" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType><xs:group ref="formula"/></xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="calculations" minOccurs="0"/>
+        <xs:element name="comments"     minOccurs="0"/>
+        <xs:element name="featureOrder" minOccurs="0"/>
+      </xs:all>
+    </xs:complexType>
+
+    <!-- Feature names are unique, and every constraint variable names one. -->
+    <xs:key name="featureName">
+      <xs:selector xpath=".//feature|.//and|.//or|.//alt"/>
+      <xs:field xpath="@name"/>
+    </xs:key>
+    <xs:keyref name="varRefsFeature" refer="featureName">
+      <xs:selector xpath=".//var"/>
+      <xs:field xpath="."/>
+    </xs:keyref>
+  </xs:element>
+</xs:schema>

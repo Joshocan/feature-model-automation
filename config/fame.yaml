@@ -1,0 +1,175 @@
+# config/fame.yaml
+# Single source of truth for running the FAME tool.
+
+project:
+  name: "fame-project-tool"
+  # Optional: if empty, dirs.py resolves repo root; if set, overrides base_dir resolution
+  base_dir: ""
+  # Experiment id / label used in output file names
+  run_tag: "dev"
+
+services:
+  chroma:
+    mode: "persistent"         # persistent | http
+    path: "data/chroma_db"     # relative to base_dir if not absolute
+    host: "127.0.0.1"
+    port: 8000
+    startup_timeout_s: 120
+    force_restart: false
+
+  ollama:
+    # Default host (local). You can split hosts for embeddings vs LLM if needed.
+    host: "http://127.0.0.1:11434"
+    embed_host: "http://127.0.0.1:11434"
+    llm_host: "https://ollama.com"
+    # If you have CLI binary, you can set this; otherwise leave empty and use server-only mode.
+    bin: ""
+    startup_timeout_s: 60
+    force_restart: false
+    embed_model: "nomic-embed-text"
+    llm_model: "gpt-oss:120b-cloud"
+    # Auth (optional)
+    api_key_env: "OLLAMA_API_KEY"
+    api_key_file: "api_keys/ollama_key.txt"
+    auth_header: "Authorization"
+    auth_scheme: "Bearer"
+
+  llm_judge:
+    provider: "openai"          # openai | gemini | anthropic
+    model: "gpt-4.1"
+    # Optional: override API base URL (empty uses provider default)
+    base_url: ""
+    # Environment variable that holds your API key
+    api_key_env: "JUDGE_API_KEY"
+    api_key_dir: "api_keys"
+    temperature: 0.2
+    max_tokens: 16000
+    model_max_tokens:
+      gpt-4.1: 32000
+      o3: 32000
+      gemini-3.1-pro-preview: 65536
+      gemini-2.5-flash: 32000
+      claude-opus-4-5: 64000
+    timeout_s: 120
+
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed/algorithm_1"
+  chunks_subdir: "chunks"
+
+ingestion:
+  enabled: true
+  allowed_extensions: [".pdf", ".docx", ".txt", ".md"]
+  # If true, skip files if corresponding chunks.json already exists
+  skip_if_exists: true
+  # Chunking / cleaning knobs (wire these into your chunker if desired)
+  chunking:
+    max_characters: 4000
+    new_after_n_chars: 3500
+    combine_under_n_chars: 500
+
+vectorization:
+  enabled: true
+  # how to create collections
+  collection:
+    # one_collection: everything goes into one collection (e.g., "fame_all")
+    # per_source: one collection per document/source filename (recommended for SS/MS/IS)
+    mode: "per_source"         # one_collection | per_source
+    one_collection_name: "fame_all"
+    prefix: ""                 # e.g. "mf_" -> collection names mf_paper1, mf_paper2
+  batch_size: 24
+
+retrieval:
+  # default query template for ALL RAG pipelines
+  default_query_template: |
+    ({{ROOT_FEATURE}} AND {{DOMAIN}})
+    AND (approach OR methodology OR method OR framework OR architecture OR implementation OR design OR pipeline OR workflow OR algorithm OR technique OR system OR tool OR platform OR infrastructure)
+    AND (propose OR present OR introduce OR describe OR implement OR develop OR build OR realize OR evaluate OR validate OR experiment OR case study OR study)
+  n_results_per_collection: 6
+  max_total_results: 12
+  evidence_format:
+    max_total_chars: 18000
+    max_chunk_chars: 2500
+
+context:
+  # shared context builder (used by Non-RAG and optionally IS-RGFM)
+  order: "by_page_then_id"     # as_is | by_page_then_id | by_id
+  include_headers: true
+
+pipelines:
+  # ---------- RAG pipelines ----------
+  ss_rgfm:
+    enabled: true
+    prompt_path: "prompts/fm_extraction_prompt.txt"
+
+  ms_rgfm:
+    enabled: true
+
+  is_rgfm:
+    enabled: true
+    initial_prompt_path: "prompts/fm_extraction_prompt.txt"
+    iter_prompt_path: "prompts/fm_iterated_prompt.txt"
+    retry_backoff_base_seconds: 2.0
+    retry_backoff_cap_seconds: 60.0
+    inter_iteration_sleep_seconds: 1.0
+
+  # ---------- NON-RAG pipelines ----------
+  ss_nonrag:
+    enabled: true
+    prompt_path: ""            # optional file path; leave empty to use default
+    context_budget:
+      max_total_chars: 140000
+      max_chunks: 120
+      max_chunk_chars: 6000
+    temperature: 0.2
+
+  is_nonrag:
+    enabled: true
+    prompt_path: ""            # optional; otherwise uses default internal template
+    prompt_paths:
+      initial: "prompts/fm_extraction_prompt.txt"
+      iter: "prompts/fm_iterated_prompt.txt"
+    delta_budget:
+      max_delta_chars: 50000
+      max_delta_chunks: 50
+      max_delta_chunk_chars: 6000
+    temperature: 0.2
+    retry_backoff_base_seconds: 2.0
+    retry_backoff_cap_seconds: 60.0
+    inter_iteration_sleep_seconds: 1.0
+
+  # ---------- Core-metamodel track (used by fame_web) ----------
+  # Documentation-only block. fame_web passes these paths explicitly
+  # to the IS scripts via --initial-prompt-path / --iter-prompt-path.
+  # The feature-model track above (is_rgfm / is_nonrag) is unaffected
+  # and continues to be used for standalone CLI runs of the FM project.
+  is_core_structure:
+    initial_prompt_path: "prompts/core_structure_metamodel_extraction.txt"
+    iter_prompt_path:    "prompts/core_structure_metamodel_extraction_iterated.txt"
+
+outputs:
+  # All under results/ by default; dirs.py defines exact structure.
+  save_prompts: true
+  save_context: true
+  save_meta: true
+  top_fm: 3
+  # If true, store "latest" symlink-like pointer file (text file with last run id)
+  write_latest_pointer: true
+
+logging:
+  level: "INFO"
+  # If set, logs can also be written to a file under results/
+  to_file: true
+  json: true
+  console: true
+  console_level: "WARNING"
+  console_include_exc: false
+
+evaluation:
+  ground_truth_xml: ""
+  coverage:
+    model_name: "all-mpnet-base-v2"
+    similarity_threshold: 0.35
+    top_k: 3
+    feature_weight: 0.9
+    parent_weight: 0.1

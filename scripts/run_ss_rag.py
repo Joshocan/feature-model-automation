@@ -1,0 +1,294 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import os
+from pathlib import Path
+
+from fame.config.load import load_config
+from fame.evaluation.coverage import CoverageConfig
+from fame.evaluation.top_fm import TopFMConfig, rank_top_fms
+from fame.rag.ss_pipeline import SSRGFMConfig, run_ss_rgfm
+from fame.loggers import get_logger, log_exception
+from fame.exceptions import UserMessageError, MissingKeyError, format_error
+from fame.nonrag.cli_utils import (
+    dataset_choices,
+    dataset_defaults,
+    load_high_level_features,
+    load_key_file,
+    prompt_choice,
+)
+from fame.judge import create_judge_client
+from fame.utils.dirs import build_paths
+from fame.utils.web_candidates import emit_web_candidate
+
+
+def _default_dataset_chunks_dir(dataset: str) -> Path:
+    paths = build_paths()
+    return (paths.base_dir / "data" / "processed" / dataset / "chunks").resolve()
+
+
+def _resolve_model_max_tokens(judge_cfg, model: str) -> int:
+    return int(getattr(judge_cfg, "model_max_tokens", {}).get(model, judge_cfg.max_tokens))
+
+
+def _prompt_int(label: str, *, default: int, min_value: int = 1) -> int:
+    while True:
+        raw = input(f"{label} [{default}]: ").strip()
+        if not raw:
+            return default
+        try:
+            val = int(raw)
+        except ValueError:
+            print("Invalid integer. Try again.")
+            continue
+        if val < min_value:
+            print(f"Value must be >= {min_value}.")
+            continue
+        return val
+
+
+def main() -> None:
+    cfg_yaml = load_config()
+    p_cfg = cfg_yaml.pipelines.ss_nonrag  # reuse defaults where sensible
+
+    ap = argparse.ArgumentParser(description="Run Single-Stage RAG Generated Feature Modeling (SS-RGFM)")
+    ap.add_argument("--root-feature", default="")
+    ap.add_argument("--domain", default="")
+    ap.add_argument("--dataset", choices=dataset_choices(), default="federation", help="Dataset-specific prompt guidance to load.")
+    ap.add_argument("--high-level-features-config", default="", help="Optional YAML file overriding dataset high-level features.")
+    ap.add_argument("--no-high-level-features", action="store_true", help="Disable high-level feature guidance injection.")
+    ap.add_argument("--chunks-dir", default="", help="Directory containing *.chunks.json (default: processed_data/chunks)")
+    ap.add_argument("--temperature", type=float, default=0.2)
+    ap.add_argument("--prompt-path", default="", help="Custom prompt template path")
+    ap.add_argument("--n-results-per-collection", type=int, default=6)
+    ap.add_argument("--max-total-results", type=int, default=12)
+    ap.add_argument(
+        "--k-strategy",
+        choices=["auto", "fixed"],
+        default="auto",
+        help="auto = half the chunks per source (current default). fixed = use --n-results-per-collection.",
+    )
+    ap.add_argument("--max-total-chars", type=int, default=18_000)
+    ap.add_argument("--max-chunk-chars", type=int, default=2_500)
+    ap.add_argument("--collection-mode", default="per_source", choices=["per_source", "one_collection"])
+    ap.add_argument("--one-collection-name", default="fame_all")
+    ap.add_argument("--collection-prefix", default="")
+    ap.add_argument("--batch-size", type=int, default=24)
+    ap.add_argument("--interactive", action="store_true", help="Run with guided prompts")
+    ap.add_argument("--xsd-path", default="", help="Override XSD path (default: feature_model_featureide.xsd)")
+    ap.add_argument("--feature-metamodel-path", default="", help="Override feature metamodel path")
+    ap.add_argument("--repeats", type=int, default=1, help="How many runs to execute sequentially (default: 1).")
+    ap.add_argument("--max-retries", type=int, default=1, help="Retries for a failed single-stage generation (default: 1).")
+    ap.add_argument("--gt-path", default="", help="Ground-truth XML used for top_fm ranking")
+    ap.add_argument("--top-fm", type=int, default=cfg_yaml.outputs.top_fm, help="Top valid FMs to copy per metric (default from fame.yaml)")
+    ap.add_argument("--input-dir", default="",
+                    help="Per-run raw artefacts directory. Overrides data/raw. "
+                         "Also settable via FAME_INPUT_FILES_DIR.")
+    ap.add_argument("--output-dir", default="",
+                    help="Per-run results root. Overrides <base>/results — everything "
+                         "the pipeline writes (fm, context, reports, runs) lands under here. "
+                         "Also settable via FAME_OUTPUT_DIR.")
+    ap.add_argument("--domain-vocabulary", default="",
+                    help="Path to a domain-vocabulary YAML file whose content is "
+                         "injected into the prompt as {{DOMAIN_VOCABULARY}}. "
+                         "Required by prompts/core_structure_metamodel_extraction.txt.")
+    ap.add_argument("--artefacts-registry", default="",
+                    help="Path to a SourceArtefact registry YAML whose content is "
+                         "injected into the prompt as {{ARTEFACTS_REGISTRY}}. "
+                         "Required by prompts/core_structure_metamodel_extraction.txt.")
+    ap.add_argument("--run-tag", default=os.getenv("FAME_RUN_ID", "ss-rgfm"),
+                    help="Run identifier passed through to output filenames (default: FAME_RUN_ID env or 'ss-rgfm').")
+    args = ap.parse_args()
+
+    # Per-run I/O overrides. Set the env vars BEFORE anything calls build_paths(),
+    # so the entire pipeline (ingestion, vectorization, retrieval, run outputs) inherits
+    # the redirect.
+    if args.input_dir:
+        os.environ["FAME_INPUT_FILES_DIR"] = str(Path(args.input_dir).expanduser().resolve())
+    if args.output_dir:
+        os.environ["FAME_OUTPUT_DIR"] = str(Path(args.output_dir).expanduser().resolve())
+
+    interactive = args.interactive or not (args.root_feature and args.domain)
+
+    llm_client = None
+    high_level_features = None
+
+    if interactive:
+        mode = prompt_choice("1) Open Source LLM  OR Proprietary LLM", ("Open Source LLM", "Proprietary LLM"))
+
+        if mode == "Open Source LLM":
+            model = prompt_choice(
+                "Select Open Source LLM model",
+                ("gpt-oss:120b-cloud", "glm-4.7:cloud", "deepseek-v3.2:cloud"),
+            )
+            os.environ["OLLAMA_LLM_MODEL"] = model
+
+            key_path = Path("api_keys/ollama_key.txt")
+            key = load_key_file(key_path)
+            if key:
+                os.environ["OLLAMA_API_KEY_FILE"] = str(key_path)
+                os.environ.setdefault("OLLAMA_LLM_HOST", "https://ollama.com")
+            else:
+                print("WARN:  ollama_key not found. Using local Ollama for LLM.")
+                os.environ.setdefault("OLLAMA_LLM_HOST", "http://127.0.0.1:11434")
+
+            os.environ.setdefault("OLLAMA_EMBED_HOST", "http://127.0.0.1:11434")
+        else:
+            judge_cfg = cfg_yaml.llm_judge
+            model = prompt_choice(
+                "Select Proprietary LLM model",
+                ("gpt-4.1", "o3", "claude-opus-4-5", "gemini-3.1-pro-preview", "gemini-2.5-flash"),
+            )
+            provider_map = {
+                "gpt-4.1": ("openai", "OPENAI_API_KEY"),
+                "o3": ("openai", "OPENAI_API_KEY"),
+                "claude-opus-4-5": ("anthropic", "ANTHROPIC_API_KEY"),
+                "gemini-3.1-pro-preview": ("gemini", "GEMINI_API_KEY"),
+                "gemini-2.5-flash": ("gemini", "GEMINI_API_KEY"),
+            }
+            provider, env_var = provider_map[model]
+            key_file = judge_cfg.api_key_dir / f"{provider}_key.txt"
+            key = load_key_file(key_file)
+            if not key:
+                raise MissingKeyError(env_var, str(key_file))
+            os.environ[env_var] = key
+
+            resolved_max_tokens = _resolve_model_max_tokens(judge_cfg, model)
+            print(f"Resolved max tokens for {model}: {resolved_max_tokens}")
+            llm_client = create_judge_client(
+                provider=provider,
+                model=model,
+                base_url=judge_cfg.base_url,
+                api_key_env=env_var,
+                temperature=judge_cfg.temperature,
+                max_tokens=resolved_max_tokens,
+                timeout_s=judge_cfg.timeout_s,
+            )
+
+        dataset_meta = dataset_defaults(args.dataset)
+        domain = input(f"Enter domain [{dataset_meta['domain']}]: ").strip() or dataset_meta["domain"]
+        root_feature = input(f"Enter root feature [{dataset_meta['root_feature']}]: ").strip() or dataset_meta["root_feature"]
+        args.domain = domain
+        args.root_feature = root_feature
+        config_override = Path(args.high_level_features_config).expanduser().resolve() if args.high_level_features_config else None
+        feats = None if args.no_high_level_features else load_high_level_features(dataset=args.dataset, config_path=config_override)
+        hl = input("Include high-level features? (Y/n): ").strip().lower()
+        if hl not in ("n", "no") and feats:
+            print("\nHigh-level features (loaded):")
+            for k, v in feats.items():
+                print(f"- {k}: {v}")
+            confirm = input("Use these? (Y/n): ").strip().lower()
+            if confirm not in ("n", "no"):
+                high_level_features = feats
+
+        args.repeats = _prompt_int("Number of runs to execute sequentially", default=max(1, args.repeats), min_value=1)
+        args.max_retries = _prompt_int("Max retries for a failed generation", default=max(1, args.max_retries), min_value=1)
+
+    if not interactive:
+        config_override = Path(args.high_level_features_config).expanduser().resolve() if args.high_level_features_config else None
+        high_level_features = None if args.no_high_level_features else load_high_level_features(dataset=args.dataset, config_path=config_override)
+    else:
+        high_level_features = getattr(args, "high_level_features", None)
+
+    chunks_dir = Path(args.chunks_dir).expanduser().resolve() if args.chunks_dir else _default_dataset_chunks_dir(args.dataset)
+    prompt_path = Path(args.prompt_path).expanduser() if args.prompt_path else None
+    if prompt_path is None:
+        prompt_path = cfg_yaml.pipelines.ss_rgfm_prompt_path
+
+    cfg = SSRGFMConfig(
+        root_feature=args.root_feature,
+        domain=args.domain,
+        chunks_dir=chunks_dir,
+        chunks_files=None,
+        collection_mode=args.collection_mode,
+        one_collection_name=args.one_collection_name,
+        collection_prefix=args.collection_prefix,
+        batch_size=args.batch_size,
+        n_results_per_collection=args.n_results_per_collection,
+        max_total_results=args.max_total_results,
+        max_total_chars=args.max_total_chars,
+        max_chunk_chars=args.max_chunk_chars,
+        k_strategy=args.k_strategy,
+        prompt_path=prompt_path,
+        temperature=args.temperature,
+        xsd_path=Path(args.xsd_path).expanduser().resolve() if args.xsd_path else None,
+        feature_metamodel_path=Path(args.feature_metamodel_path).expanduser().resolve() if args.feature_metamodel_path else None,
+        high_level_features=high_level_features,
+        max_retries=args.max_retries,
+        dataset=args.dataset,
+        domain_vocabulary_path=Path(args.domain_vocabulary).expanduser().resolve() if args.domain_vocabulary else None,
+        artefacts_registry_path=Path(args.artefacts_registry).expanduser().resolve() if args.artefacts_registry else None,
+        run_tag=args.run_tag,
+    )
+
+    print("\n==================== SS-RGFM ====================")
+    print(f"Root feature   : {cfg.root_feature}")
+    print(f"Domain         : {cfg.domain}")
+    print(f"Model          : {(getattr(llm_client, 'model', None) or os.getenv('OLLAMA_LLM_MODEL', 'ollama-default'))}")
+    print(f"Repeats        : {args.repeats}")
+    print(f"Max retries    : {cfg.max_retries}")
+    chroma_mode = os.getenv("CHROMA_MODE", "persistent").lower()
+    if chroma_mode == "http":
+        chroma_host = os.getenv("CHROMA_HOST", "127.0.0.1")
+        chroma_port = os.getenv("CHROMA_PORT", "8000")
+        chroma_info = f"http://{chroma_host}:{chroma_port}"
+    else:
+        chroma_path = os.getenv("CHROMA_PATH", "data/chroma_db")
+        chroma_info = f"persistent @ {chroma_path}"
+    print(f"Chunk server   : Chroma ({chroma_info}) [collections from {chunks_dir or 'default processed_data/chunks'}]")
+    print("-------------------------------------------------")
+    print("Stage 1: Build configuration")
+    print(f"Stage 2: Run SS-RGFM pipeline (may take a while)...")
+
+    results = []
+    for i in range(max(1, args.repeats)):
+        if args.repeats > 1:
+            print(f"\n--- Run {i+1}/{args.repeats} ---")
+        out = run_ss_rgfm(cfg, llm=llm_client)
+        emit_web_candidate(out, i + 1)
+        results.append(out)
+        print("SUCCESS: SS-RGFM completed")
+        for k, v in out.items():
+            print(f"{k}: {v}")
+
+    if args.repeats > 1:
+        print(f"\nCompleted {args.repeats} runs.")
+
+    gt_path = Path(args.gt_path).expanduser().resolve() if args.gt_path else cfg_yaml.evaluation.ground_truth_xml
+    if args.top_fm > 0 and gt_path:
+        paths = build_paths()
+        xsd_path = cfg.xsd_path or (paths.specifications / "feature_model_featureide.xsd")
+        manifest = rank_top_fms(
+            candidates=results,
+            pipeline_root=paths.ss_fm.parent,
+            cfg=TopFMConfig(
+                top_n=args.top_fm,
+                gt_xml=gt_path,
+                xsd_path=xsd_path,
+                coverage=CoverageConfig(
+                    model_name=cfg_yaml.evaluation.coverage.model_name,
+                    similarity_threshold=cfg_yaml.evaluation.coverage.similarity_threshold,
+                    top_k=cfg_yaml.evaluation.coverage.top_k,
+                    feature_weight=cfg_yaml.evaluation.coverage.feature_weight,
+                    parent_weight=cfg_yaml.evaluation.coverage.parent_weight,
+                ),
+                output_subdir=args.dataset,
+            ),
+        )
+        if manifest:
+            print(f"Top-FM ranking written to: {Path(manifest['summary_table']).parent}")
+    elif args.top_fm > 0:
+        print("Top-FM ranking skipped: no ground-truth XML configured or provided.")
+
+
+if __name__ == "__main__":
+    logger = get_logger("ss_rgfm")
+    try:
+        main()
+    except UserMessageError as e:
+        print(f"ERROR: {format_error(e)} (see results/logs/fame.log for details)")
+        log_exception(logger, e)
+    except Exception as e:
+        log_exception(logger, e)
+        raise

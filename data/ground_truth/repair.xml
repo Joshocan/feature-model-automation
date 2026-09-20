@@ -1,0 +1,297 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<featureModel>
+  <properties>
+    <graphics key="autolayoutconstraints" value="false" />
+    <graphics key="showconstraints" value="true" />
+    <graphics key="layout" value="vertical" />
+    <graphics key="showcollapsedconstraints" value="true" />
+  </properties>
+  <struct>
+    <and abstract="true" mandatory="true" name="Repair_Technique">
+      <description>
+        Ground-truth reconstruction of the feature-based classification of model repair approaches,
+        based on the screenshots of the classification feature model and the paper
+        "A Feature-based Classification of Model Repair Approaches".
+      </description>
+      <and abstract="true" mandatory="true" name="Domain">
+        <description>
+          Domain characterizes the modeling setting assumed by a repair technique, including the
+          formalisms it targets, whether it is meta-model independent, the technical space in which
+          models are defined, and whether the setting is bounded or multi-model.
+        </description>
+        <alt abstract="true" mandatory="true" name="Formalism">
+          <description>
+            Formalism captures the family of modeling notations or representations manipulated by the
+            technique, such as logical, object-oriented, relational, or graph-based models.
+          </description>
+          <feature name="Logical" />
+          <feature name="Object_oriented" />
+          <feature name="Relational" />
+          <feature name="Graph" />
+        </alt>
+        <feature name="Meta_model_Independent" />
+        <alt abstract="true" mandatory="true" name="Technical_Space">
+          <description>
+            Technical_Space identifies the modeling framework or technological space used to define the
+            models, such as XML, MDA, EMF, or other environments.
+          </description>
+          <feature name="XML" />
+          <feature name="MDA" />
+          <feature name="EMF" />
+          <feature name="Other" />
+        </alt>
+        <feature name="Bounded" />
+        <and abstract="true" name="Multi_model">
+          <description>
+            Multi_model denotes techniques that manage consistency across more than one model and may
+            distinguish controlled-update and pairwise settings.
+          </description>
+          <feature name="Controlled_Update" />
+          <feature name="Pairwise" />
+        </and>
+      </and>
+      <and abstract="true" mandatory="true" name="Constraint">
+        <description>
+          Constraint classifies how consistency constraints are specified, what kind of relations they
+          express, and in which structural shape those relations are represented.
+        </description>
+        <and abstract="true" mandatory="true" name="Specification">
+          <description>
+            Specification captures whether constraints are hard coded, user definable, augmented with
+            repair hints, or distinguished for special treatment such as violation selection.
+          </description>
+          <or name="Specification_Mode">
+            <feature name="Hard_Coded" />
+            <feature name="User_Definable" />
+          </or>
+          <feature name="Repair_Hints" />
+          <and abstract="true" name="Distinguished">
+            <feature name="Violation_Selection" />
+          </and>
+        </and>
+        <or abstract="true" mandatory="true" name="Kind">
+          <description>
+            Kind classifies constraints according to whether they concern a single model, multiple models,
+            or are expressed directly as logical formulas.
+          </description>
+          <feature name="Intra_model" />
+          <feature name="Inter_model" />
+          <feature name="Logical_Kind" />
+        </or>
+        <or abstract="true" mandatory="true" name="Shape">
+          <description>
+            Shape captures the mechanism used to represent cross-model relationships and constraints,
+            such as traceability links, consistency relations, transformations, logical formulas, or
+            pattern matching.
+          </description>
+          <feature name="Logical_Shape" />
+          <feature name="Pattern_Matching" />
+          <feature name="Traceability" />
+          <feature name="Consistency_Relation" />
+          <feature name="Transformation" />
+        </or>
+      </and>
+      <and abstract="true" mandatory="true" name="Update">
+        <description>
+          Update classifies the information about user changes that is available to the repair procedure,
+          including state-based and delta-based representations such as frames, edit sequences,
+          pre-states, and histories.
+        </description>
+        <feature name="State_based" />
+        <and abstract="true" name="Delta_based">
+          <feature name="Frame" />
+          <feature name="Edit_Sequence" />
+          <feature name="Pre_state" />
+          <feature name="History" />
+        </and>
+      </and>
+      <and abstract="true" mandatory="true" name="Check">
+        <description>
+          Check captures how consistency checking is integrated with repair, whether the checker is
+          internal or external, whether check-only mode is supported, and what form of reporting is
+          returned to the repair procedure or user.
+        </description>
+        <alt abstract="true" mandatory="true" name="Mechanism">
+          <and abstract="true" name="External">
+            <feature name="User" />
+          </and>
+          <feature name="Internal" />
+        </alt>
+        <feature name="Checkonly" />
+        <and abstract="true" mandatory="true" name="Reporting">
+          <description>
+            Reporting describes the shape of inconsistency information returned by the checker, ranging
+            from simple boolean and counting reports to explicit violation sets, goals, and composite
+            reports.
+          </description>
+          <alt abstract="true" mandatory="true" name="Simple">
+            <feature name="Boolean" />
+            <feature name="Number" />
+            <feature name="Violations" />
+            <feature name="Goal" />
+          </alt>
+          <feature name="Composite" />
+        </and>
+      </and>
+      <and abstract="true" mandatory="true" name="Repair">
+        <description>
+          Repair groups the main design choices of a model repair technique, including the core repair
+          engine, enumeration strategy, repair representation, available edit operations, and semantic
+          guarantees such as totality, correctness, stability, and least change.
+        </description>
+        <or abstract="true" mandatory="true" name="Core">
+          <description>
+            Core identifies the main repair engine, such as human-centric, rule-based, syntactic, or
+            search-based approaches.
+          </description>
+          <feature name="Human_centric" />
+          <and abstract="true" name="Rule_based">
+            <feature name="Generative" />
+          </and>
+          <feature name="Syntactic" />
+          <or abstract="true" name="Search_based">
+            <feature name="Off_the_shelf_Solver" />
+            <feature name="Domain_specific_Heuristics" />
+          </or>
+        </or>
+        <and abstract="true" mandatory="true" name="Enumeration">
+          <description>
+            Enumeration captures whether the procedure returns one or many repairs, whether the set is
+            complete, how repairs are ordered, and whether ordering is fixed, opaque, parameterized, or
+            refined interactively.
+          </description>
+          <and abstract="true" name="Multiple_Repairs">
+            <feature name="Complete" />
+          </and>
+          <feature name="Single_Repair" />
+          <alt abstract="true" mandatory="true" name="Order">
+            <feature name="Opaque" />
+            <feature name="Pre_defined" />
+            <or abstract="true" name="Parametrizable">
+              <feature name="Operation_Costs" />
+              <and abstract="true" name="Model_Weights">
+                <feature name="Area_Selection" />
+              </and>
+              <feature name="Meta_model_Weights" />
+              <feature name="Constraint_Priorities" />
+              <feature name="Meta_data" />
+            </or>
+          </alt>
+          <feature name="Interactive" />
+        </and>
+        <alt abstract="true" mandatory="true" name="Representation">
+          <description>
+            Representation distinguishes state-based repairs from operation-based repairs, including
+            whether the output is a repair action or repair plan and whether it is concrete or abstract.
+          </description>
+          <feature name="State_representation" />
+          <and abstract="true" name="Operation_based">
+            <alt abstract="true" mandatory="true" name="Repair_Form">
+              <feature name="Repair_Action" />
+              <feature name="Repair_Plan" />
+            </alt>
+            <alt abstract="true" mandatory="true" name="Operation_Level">
+              <feature name="Concrete" />
+              <feature name="Abstract" />
+            </alt>
+          </and>
+        </alt>
+        <alt abstract="true" mandatory="true" name="Edit_Operations">
+          <description>
+            Edit_Operations describes whether the repair engine assumes no explicit edit vocabulary or
+            relies on a fixed or customizable set of edit operations.
+          </description>
+          <feature name="Undefined" />
+          <feature name="Fixed" />
+          <feature name="Customizable" />
+        </alt>
+        <and abstract="true" mandatory="true" name="Semantics">
+          <description>
+            Semantics captures the guarantees expected from repairs, including totality, correctness,
+            stability, and least-change properties.
+          </description>
+          <feature name="Totality" />
+          <alt abstract="true" name="Correctness">
+            <description>
+              Correctness refines whether the repair procedure is merely well-behaved, consistency
+              improving, or fully consistent.
+            </description>
+            <feature name="Well_behaved" />
+            <feature name="Consistency_Improving" />
+            <feature name="Fully_Consistent" />
+          </alt>
+          <feature name="Stability" />
+          <feature name="Least_change" />
+        </and>
+      </and>
+    </and>
+  </struct>
+  <constraints>
+    <rule>
+      <imp>
+        <var>Operation_Costs</var>
+        <var>Edit_Operations</var>
+      </imp>
+    </rule>
+    <rule>
+      <imp>
+        <var>Inter_model</var>
+        <var>Multi_model</var>
+      </imp>
+    </rule>
+    <rule>
+      <imp>
+        <var>Traceability</var>
+        <var>Inter_model</var>
+      </imp>
+    </rule>
+    <rule>
+      <imp>
+        <var>Consistency_Relation</var>
+        <var>Inter_model</var>
+      </imp>
+    </rule>
+    <rule>
+      <imp>
+        <var>Transformation</var>
+        <var>Inter_model</var>
+      </imp>
+    </rule>
+    <rule>
+      <imp>
+        <var>Violation_Selection</var>
+        <var>Violations</var>
+      </imp>
+    </rule>
+    <rule>
+      <imp>
+        <var>Meta_model_Independent</var>
+        <var>Hard_Coded</var>
+      </imp>
+    </rule>
+    <rule>
+      <imp>
+        <var>Least_change</var>
+        <var>Pre_defined</var>
+      </imp>
+    </rule>
+    <rule>
+      <imp>
+        <var>Consistency_Improving</var>
+        <var>Well_behaved</var>
+      </imp>
+    </rule>
+    <rule>
+      <imp>
+        <var>Fully_Consistent</var>
+        <var>Consistency_Improving</var>
+      </imp>
+    </rule>
+    <rule>
+      <imp>
+        <var>Composite</var>
+        <var>Distinguished</var>
+      </imp>
+    </rule>
+  </constraints>
+</featureModel>

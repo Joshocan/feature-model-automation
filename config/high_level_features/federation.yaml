@@ -1,0 +1,12 @@
+Structural: |
+  Covers the artefacts, links, and structural features of Model Federation,
+  including model composition, graph structure, formalism, domain, and
+  technological context.
+Operational: |
+  Includes the processes, operations, and triggers in Model Federation,
+  focusing on querying, synchronisation, validation, and management of
+  federated models and links.
+Intentional: |
+  Addresses the objectives and goals of Model Federation, such as
+  traceability, consistency assurance, transformation management,
+  composition, and conceptual elicitation.

@@ -1,0 +1,15 @@
+Domain: |
+  Describes the modelling setting, technical space, and scope in which the
+  repair technique is defined or applied.
+Constraint: |
+  Captures the kinds of constraints involved, including how inconsistencies
+  are specified, represented, or classified.
+Update: |
+  Describes how model changes, edits, or update operations are represented
+  and tracked in the repair process.
+Check: |
+  Covers how inconsistencies are detected, checked, diagnosed, or reported
+  before or during repair.
+Repair: |
+  Captures the repair actions themselves, including repair enumeration,
+  representation, execution, and semantic properties.

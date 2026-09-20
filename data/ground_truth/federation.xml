@@ -1,0 +1,423 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<featureModel>
+  <properties>
+    <graphics key="autolayoutconstraints" value="false" />
+    <graphics key="legendposition" value="625,12" />
+    <graphics key="legendautolayout" value="false" />
+    <graphics key="showconstraints" value="true" />
+    <graphics key="showshortnames" value="false" />
+    <graphics key="layout" value="vertical" />
+    <graphics key="showcollapsedconstraints" value="true" />
+    <graphics key="legendhidden" value="false" />
+    <graphics key="layoutalgorithm" value="4" />
+  </properties>
+  <struct>
+    <and abstract="true" mandatory="true" name="Model_Management">
+      <and name="Model_Federation" abstract="true">
+        <description>
+					All models stay in their own world and do not directly
+					interfere with the language specification of the others (non-
+					intrusiveness); each world is related to the others through
+					meaningful relations that explicit how and why models are
+					related to each other
+				</description>
+        <graphics key="collapsed" value="false" />
+        <and mandatory="true" name="Structural" abstract="true">
+          <description>
+						The graph’s constituents (the nature of vertices; and how edges are organised as
+						well as what they represent), as well as the whole graph.
+					</description>
+          <graphics key="collapsed" value="true" />
+          <and mandatory="true" name="Artefacts" abstract="true">
+            <description>
+							Vertices correspond to Artefacts, as well as the elements
+							they contain
+						</description>
+            <graphics key="collapsed" value="true" />
+            <and mandatory="true" name="Domain" abstract="true">
+              <description>
+								The Domain(s) the Artefacts are intended to be used in. In [1],
+								a feature model describing CPS Domains is available. We
+								extend it with domains outside of CPS.
+								[1] : https://doi.org/10.1016/B978-0-12-819105-7.00008-8
+							</description>
+              <graphics key="collapsed" value="true" />
+              <feature name="X_Domain" />
+              <and name="CPS_Domain" abstract="true">
+                <graphics key="collapsed" value="true" />
+                <feature name="CriticalInfrastructure" />
+                <feature name="BuildingAutomation" />
+                <feature name="SmartManufacturing" />
+                <feature name="Transportation" />
+                <feature name="Defense" />
+                <feature name="Health" />
+                <feature name="EmergencyResponse" />
+                <feature name="ProcessControl" />
+                <feature name="RoboticForService" />
+              </and>
+            </and>
+            <and mandatory="true" name="TechSpace" abstract="true">
+              <description>
+								The technological space (Tech_Space) as defined by [1] is the
+								working context with its set of associated concepts, tools, and
+								possibilities, in which the Artefacts are defined. In the context
+								of MBSE, it crudely refers to the “format” (eg., the MOF meta-
+								meta-model, RDF, textual grammars, etc.) that the 	Artefact(s)
+								belong to.
+								[1] : Ivan Ivanov, Jean Bézivin, and Mehmet Aksit. 2002.
+								Technological spaces: An initial appraisal. In 4th International
+								Symposium on Distributed Objects and Applications, DOA 2002.
+							</description>
+              <graphics key="collapsed" value="true" />
+              <and name="EMOF" abstract="true">
+                <graphics key="collapsed" value="true" />
+                <feature name="Ecore" />
+              </and>
+              <feature name="Ad_hoc_Internal_TechSpace" />
+            </and>
+            <and mandatory="true" name="Formalism" abstract="true">
+              <description>
+								The Formalism(s) used to specify the Artefacts. [1] proposes
+								a list of Formalisms commonly used for CPS Engineering that
+								we use as a basis for our description.
+								[1] : https://zenodo.org/record/2533455
+							</description>
+              <graphics key="collapsed" value="true" />
+              <and name="AutomataBased" abstract="true">
+                <graphics key="collapsed" value="true" />
+                <feature name="AbstractStateMachines" />
+                <feature name="CellularAutomata" />
+                <and name="HybridAutomataBased" abstract="true">
+                  <graphics key="collapsed" value="true" />
+                  <feature name="HybridAutomata" />
+                  <feature name="IOHybridAutomata" />
+                  <feature name="LinearHybridAutomata" />
+                  <feature name="NonLinearHybridAutomata" />
+                  <feature name="StochasticHybridAutomata" />
+                </and>
+                <and name="TimedAutomata" abstract="true">
+                  <graphics key="collapsed" value="true" />
+                  <feature name="ProbabilisticTimedAutomata" />
+                  <feature name="StochasticTimedAutomata" />
+                  <feature name="IOTimedAutomata" />
+                </and>
+              </and>
+              <and name="PetriNetBased" abstract="true">
+                <graphics key="collapsed" value="true" />
+                <feature name="HighLevelPetriNet" />
+                <feature name="PetriNet" />
+                <feature name="PriorityPetriNet" />
+                <feature name="StochasticPetriNet" />
+                <feature name="TimedPetriNet" />
+              </and>
+              <and name="LogicBased" abstract="true">
+                <graphics key="collapsed" value="true" />
+                <feature name="FirstOrderLogic" />
+                <and name="TemporalLogic" abstract="true">
+                  <graphics key="collapsed" value="true" />
+                  <feature name="LinearTemporalLogic" />
+                  <feature name="ComputationTreeLogic" />
+                  <feature name="Hennessy_MilnerLogic" />
+                </and>
+              </and>
+              <and name="FlowBased" abstract="true">
+                <graphics key="collapsed" value="true" />
+                <feature name="DataFlow" />
+                <feature name="HybridFlow" />
+                <feature name="NewFeature" />
+              </and>
+              <feature name="ComplexNetworks" />
+              <feature name="BayesianNetworks" />
+              <feature name="BondGraphs" />
+              <feature name="CausalBlockDiagram" />
+              <feature name="Formalism_Agnostic" />
+              <feature name="X_Formalism" />
+              <feature name="DifferentialEquations" />
+              <feature name="DiscontinuousSystems" />
+              <feature name="DiscreteEvent" />
+              <feature name="ElectricalLinearNetworks" />
+              <feature name="EntityRelationship" />
+              <feature name="FaultTrees" />
+              <feature name="MarkovChains" />
+              <feature name="ProcessAlgebras" />
+              <feature name="TimedFailurePropagationGraph" />
+              <feature name="ViennaDevelopmentMethod" />
+            </and>
+            <and name="Serialisation" abstract="true">
+              <description>The Serialisation format(s) used for persisting the Artefacts</description>
+              <graphics key="collapsed" value="true" />
+              <feature name="Serialisation_Agnostic" />
+              <feature name="DomainSpecific" />
+              <and name="General" abstract="true">
+                <graphics key="collapsed" value="true" />
+                <feature name="XMI_XML" />
+                <feature name="RDF" />
+                <feature name="JSON" />
+              </and>
+            </and>
+          </and>
+          <and mandatory="true" name="Links" abstract="true">
+            <description>Edges correspond to Links</description>
+            <graphics key="collapsed" value="true" />
+            <and mandatory="true" name="Arity" abstract="true">
+              <description>Refers to the number of artefacts defining, and participating in a Link</description>
+              <graphics key="collapsed" value="true" />
+              <feature name="Binary" />
+              <feature name="N_ary" />
+            </and>
+            <and mandatory="true" name="Granularity" abstract="true">
+              <description>It refers to the specific ‘level’ of decomposition of the linked Artefacts</description>
+              <graphics key="collapsed" value="true" />
+              <and name="Element" abstract="true">
+                <description>
+									A link exists at the Element level, meaning that structural prop-
+									erties (or model-elements) of the Artefacts are actually linked.
+								</description>
+                <graphics key="collapsed" value="false" />
+                <feature name="Reference">
+                  <description>
+										The Link simply References the involved Elements, e.g. to indicate that
+										they may be impacted by a change.
+									</description>
+                </feature>
+                <feature name="Content">
+                  <description>
+										The Link may gives access to the Element’s
+										Content (i.e. the type, in case of a meta-model; or the value, in
+										case of a model), which may be useful for e.g. to propagate
+										values changes throughout interconnected models
+									</description>
+                </feature>
+              </and>
+              <feature name="Model">
+                <description>
+									A Link exists at the Model-level, meaning that its
+									target Artefacts are whole models
+								</description>
+              </feature>
+            </and>
+            <and mandatory="true" name="Specification" abstract="true">
+              <description>
+								The Specification feature describes the way Links are defined. This
+								can be fully manual, by linking individual Artefacts for example,
+								or follow a more complex process in which correspondences are
+								defined Manual-ly at the meta-level and then concrete links are
+								Semi-Automatic-ally generated through a matching process. This
+								case indeed relates to the Decomposable-ity of the Link Semantics.
+							</description>
+              <graphics key="collapsed" value="true" />
+              <feature name="Manual_Specification" />
+              <feature name="Semi_automated_Specification" />
+            </and>
+            <feature name="Persistence">
+              <description>
+								The Links’ Persistence feature characterises MF contributions
+								where Links are persisted, meaning that it is possible to retrieve
+								the Links independently of a modelling session, or after it has
+								ended
+							</description>
+            </feature>
+            <and mandatory="true" name="Semantics" abstract="true">
+              <description>
+								The Semantics associated with the Links.
+								This feature describes the ‘meaning’ of the Links, i.e.
+								why, and for which purpose, the Artefacts are related
+								by the Links.
+							</description>
+              <graphics key="collapsed" value="true" />
+              <feature name="Decomposable">
+                <description>
+									It is possible to define Links at a given Granularity, and
+									(semi-)automatically compute and create Links at another
+									level of Granularity.
+								</description>
+              </feature>
+              <and mandatory="true" name="Links_Typology" abstract="true">
+                <graphics key="collapsed" value="false" />
+                <feature name="ConformsTo" />
+                <feature name="DecomposedIn" />
+                <feature name="TracedTo" />
+                <feature name="ElementOf" />
+                <feature name="RepresentationOf" />
+                <feature name="TransformedIn" />
+                <feature name="X_Type" />
+              </and>
+              <feature name="Meta_model">
+                <description>
+									The Semantics of Links are explicitly Meta-modelled:
+									this allows Links’ types and relations to be freely and
+									consistently created.
+								</description>
+              </feature>
+            </and>
+            <feature name="MixedLevel">
+              <description>
+								It is possible to agnostically define Links between Artefacts
+								from any meta-modelling-level (linking together models,
+								meta-models, or models with meta-models).
+							</description>
+            </feature>
+          </and>
+          <and mandatory="true" name="Federation" abstract="true">
+            <description>
+							The structural features of the whole MF graph as a singular
+							entity are captured by the Federation feature
+						</description>
+            <graphics key="collapsed" value="true" />
+            <feature name="Process">
+              <description>
+								Creation and manipulation of the MF should follow a
+								predefined workflow
+							</description>
+            </feature>
+            <and name="Reified" abstract="true">
+              <description>The whole MF is manipulable (Artefacts and Links, together).</description>
+              <graphics key="collapsed" value="true" />
+              <feature name="Explicit">
+                <description>
+									There exists another single Artefact that explicitly encodes
+									the entire MF,
+								</description>
+              </feature>
+              <feature name="Implicit">
+                <description>
+									Modellers need to retrieve pieces
+									of Artefacts they need, by themselves
+								</description>
+              </feature>
+            </and>
+          </and>
+        </and>
+        <and mandatory="true" name="Operational" abstract="true">
+          <description>
+						The processes and operations that are possible, explicitly or implicitly defined,
+						and how they compare with each other.
+					</description>
+          <graphics key="collapsed" value="true" />
+          <and mandatory="true" name="Location" abstract="true">
+            <description>
+							The Location feature describes where the operations
+							take place: they can be attached to the Links, to the Federation, or be
+							completely External to the MF.
+						</description>
+            <graphics key="collapsed" value="true" />
+            <feature name="External" />
+            <feature name="OnLinks" />
+            <feature name="InFederation" />
+          </and>
+          <and mandatory="true" name="Operations_Typology" abstract="true">
+            <description>
+							The Operation feature describes which Operations
+							are executed on the MF. Our classification lists some common Op-
+							erations. Representing, Querying, and Constraining Operations on MFs
+							are used to visually display and retrieve models on and from the
+							MF. Syncing an MF aims at resolving inconsistencies between Arte-
+							facts. V&amp;Ving generically designates operations for validating and
+							verifying properties over the MF. Note that this list of operations is
+							generalised and not exhaustive.
+						</description>
+            <graphics key="collapsed" value="true" />
+            <feature name="Query" />
+            <feature name="Represent" />
+            <feature name="Constrain" />
+            <feature name="V_and_V" />
+            <feature name="Synchronise" />
+            <feature name="X_Operation" />
+          </and>
+          <and mandatory="true" name="Trigger" abstract="true">
+            <description>
+							The Trigger is important as it specifies when an Opera-
+							tions shall be executed. An Operation may be triggered Manual-ly and
+							on-demand, or may triggered Reactive-ly to specific events on some
+							parameters from the concerned Artefacts or the MF itself (typically,
+							modifications in the MF)
+						</description>
+            <graphics key="collapsed" value="true" />
+            <feature name="Manual_Trigger" />
+            <feature name="Reactive_Trigger" />
+          </and>
+          <and mandatory="true" name="ExecutionMode" abstract="true">
+            <description>
+							Execution Mode. (a.k.a Exec_Mode) specifies how the Oper-
+							ation works. It may work in an Incremental fashion, meaning that
+							whenever it is executed, only the new changes (typically, Links)
+							are computed and/or updated, as opposed to a full Rebuild where
+							everything is recomputed from scratch at each operation invoca-
+							tion.
+						</description>
+            <graphics key="collapsed" value="true" />
+            <feature name="FullRebuild" />
+            <feature name="Incremental" />
+          </and>
+        </and>
+        <and mandatory="true" name="Intentional" abstract="true">
+          <description>Goals or purposes of creating the MF</description>
+          <graphics key="collapsed" value="true" />
+          <feature name="CrossDomainAnalysis">
+            <description>
+							Cross-domain analysis involves examining and integrating
+							concepts, methodologies, or technologies from multiple
+							domains to resolve or optimise cross-functional concerns,
+							such as cyber-security, usability, process metrics optimisation,
+							scenario testing, etc.
+						</description>
+          </feature>
+          <feature name="ModelComposition">
+            <description>
+							Model composition is a useful modelling activity. For example,
+							in MBSE, where the aim is to build a model of a system by
+							combining existing sub-system models even when the
+							sub-system models are well-developed within their
+							heterogeneous modelling domain(s) or paradigm(s).
+						</description>
+          </feature>
+          <feature name="Traceability">
+            <description>
+							Traceability refers to the ability to track and link various
+							stages of the software or system development life-cycle. It
+							includes various activities, such as requirement assignment
+							and verification, impact analysis, compliance and auditing,
+							and project management.
+						</description>
+          </feature>
+          <feature name="ModelConsistencyChecking_Repair">
+            <description>
+						Model consistency checking and repair are essential practices
+						in MBSE. Model consistency checking involves verifying that
+						different models do not contradict each other and adhere to
+						predefined rules and constraints, while model repair focuses
+						on automatically or semi-automatically modifying
+						inconsistent model to restore overall consistency.
+					</description>
+          </feature>
+          <feature name="UnifiedTransformationManagement">
+            <description>
+						Unified transformation management refers to all tool chains
+						used in software or system production (code generation,
+						reverse engineering, model-to-model transformations). The
+						persistence of transformations enables fine-tuned, incremental
+						management and production traceability of artefacts in a
+						production pipeline.
+					</description>
+          </feature>
+          <feature name="ArtefactCodesign">
+            <description>
+						Artefact co-design corresponds to the co-construction of
+						one or more models and their associated meta-model(s),
+						where the model-to-meta-model conformance relationship
+						is not hard-coded in a tool but meta-modelled itself.
+					</description>
+          </feature>
+          <feature name="ReverseEngineering">
+            <description>
+						Conceptual elicitation / reverse engineering activities also
+						involve several models, where the aim is to build a
+						conceptual model from various technical artefacts.
+					</description>
+          </feature>
+          <feature name="X_Intention" />
+        </and>
+      </and>
+    </and>
+  </struct>
+</featureModel>
