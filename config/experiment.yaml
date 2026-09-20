@@ -1,0 +1,200 @@
+# config/experiment.yaml
+# Frozen Phase-2 protocol for the iFS 2027 campaign.
+#
+# This file supersedes config/fame.yaml for anything the new N-granularity
+# campaign runs on. fame.yaml stays only until Phase 5 finishes decommissioning
+# the legacy 4-pipeline entry points.
+#
+# Any change to a value below changes the campaign identity. The config loader
+# MUST reject missing values (crash, do not default silently) and MUST write a
+# resolved read-only snapshot into every campaign directory (per IFS §2.10).
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Identity
+# ─────────────────────────────────────────────────────────────────────────────
+campaign:
+  id: "ifs-2027"
+  frozen_on: "2026-09-20"
+  brief: "data/ground_truth/implementation-brief.md"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Corpora (D2)
+# ─────────────────────────────────────────────────────────────────────────────
+corpora:
+  federation:
+    n_docs: 23
+    raw_dir: "data/raw/federation"
+    manifest: "data/raw/federation/manifest_fed.csv"
+    ground_truth: "data/ground_truth/federation.xml"
+    doc_id_prefix: "fed_"
+  repair:
+    n_docs: 54
+    raw_dir: "data/raw/repair"
+    manifest: "data/raw/repair/manifest_repair.csv"
+    ground_truth: "data/ground_truth/repair.xml"
+    doc_id_prefix: "rep_"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Chunking (2.1 — frozen)
+# ─────────────────────────────────────────────────────────────────────────────
+chunking:
+  max_chunk_chars: 1500
+  overlap_ratio: 0.15
+  split_boundaries: ["section", "paragraph", "sentence"]
+  strip_sections:
+    - references
+    - acknowledgements
+    - author_biographies
+    - copyright
+    - front_matter
+    - back_matter
+  preprocessing_version: "v2-1500-15"   # bump on any change; participates in chunk_id hash
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Retrieval (D6 four fixed sub-queries + nomic prefixes)
+# ─────────────────────────────────────────────────────────────────────────────
+retrieval:
+  embedding_model: "nomic-embed-text"
+  document_prefix: "search_document: "     # mandatory
+  query_prefix:    "search_query: "        # mandatory
+  similarity: "cosine"
+  # Four fixed sub-queries. Identical at every step and in every RAG arm.
+  # Merged + deduplicated by chunk_id after retrieval. Never modified against outcomes.
+  sub_queries:
+    - "search_query: what {domain} approach this paper proposes and what it operates on"
+    - "search_query: how the approach works, its mechanism, algorithm or procedure"
+    - "search_query: the options, modes, variants and alternatives the approach supports"
+    - "search_query: what the approach requires, assumes, or guarantees"
+  # k_doc — TBD in Phase 4 (must be strictly below measured chunks-per-document).
+  # k_doc_grid is the sweep intent for the retrieval-depth ablation (Phase 8.6).
+  k_doc: null
+  k_doc_grid: [3, 5, 10, 15]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Generation models (2.3 — frozen)
+# ─────────────────────────────────────────────────────────────────────────────
+generation_models:
+  glm_5_3_flash:
+    provider: "ollama_cloud"
+    model_id: "glm-5.3-flash"
+    context_window_tokens: 1000000
+    max_output_tokens: 16384
+    reasoning_effort: "medium"     # open-weight fixed setting; recorded per-run in D10
+    temperature: 0.2
+    serving_endpoint: "https://ollama.com"
+    aa_index: 42
+    role: "open_weight"
+  deepseek_v4_1_flash:
+    provider: "ollama_cloud"
+    model_id: "deepseek-v4.1-flash"
+    context_window_tokens: 1000000
+    max_output_tokens: 16384
+    reasoning_effort: "medium"
+    temperature: 0.2
+    serving_endpoint: "https://ollama.com"
+    aa_index: 40
+    role: "open_weight"
+  gpt_6_astra:
+    provider: "openai"
+    model_id: "gpt-6-astra"
+    context_window_tokens: 1000000
+    max_output_tokens: 32768
+    reasoning_effort: "high"
+    temperature: 0.2
+    aa_index: 51
+    role: "proprietary_ceiling"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Prompt assembly + provenance marker (2.2)
+# ─────────────────────────────────────────────────────────────────────────────
+prompt:
+  template: "prompts/fm_prompt_template.txt"
+  metamodel_schema: "prompts/feature-model-schema.xsd"
+  # Invariant blocks first (system, metamodel, output contract, guidance, provenance);
+  # variable blocks last (context, previous model). Enables prefix caching.
+  block_order: ["system", "metamodel", "output_contract", "guidance", "provenance", "previous_model", "context"]
+  # Provenance marker grammar. Frozen. Never changes during the campaign.
+  marker_regex: "\\[src:\\s+([A-Za-z0-9_,\\s]+?)\\]\\s*\\Z"
+  marker_example: "[src: rep_01, rep_17]"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Instrument — semantic (D15)
+# ─────────────────────────────────────────────────────────────────────────────
+instrument_semantic:
+  matching_embedding_model: "all-mpnet-base-v2"
+  similarity: "cosine"
+  tau_primary: 0.4
+  tau_sweep: [0.3, 0.4, 0.5, 0.6]     # free rescore of D15
+  # Recall targets: reach(T,C) primary, F_t as labelled bound, F_t^att / F_t^org separately.
+  recall_targets: ["reach", "F_t", "F_t_attested", "F_t_organising"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Instrument — structural (D17)
+# ─────────────────────────────────────────────────────────────────────────────
+instrument_structural:
+  primary: "parent_match"
+  # Coverage weights are a design choice, no sweep; retained for reporting only.
+  coverage_feature_weight: 0.8
+  coverage_parent_weight: 0.2
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Instrument — logical (D13, D14)
+# ─────────────────────────────────────────────────────────────────────────────
+instrument_logical:
+  well_formed_conditions: ["W1", "W2", "W3", "W4", "W5"]
+  sat_solver: null           # TBD (2.6) — likely FeatureIDE's Sat4j; verify + pin
+  sat_solver_version: null   # TBD
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Instrument — statistics
+# ─────────────────────────────────────────────────────────────────────────────
+instrument_stats:
+  central_tendency: "mean_with_95ci"
+  comparison_test: "mann_whitney_u"
+  multiple_comparison_correction: "holm"
+  effect_size: "cliffs_delta"
+  inter_rater_agreement: "cohen_kappa_quadratic_weighted"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Candidate selection (Top-FM)
+# ─────────────────────────────────────────────────────────────────────────────
+selection:
+  score_formula: "alpha * F1 + beta * coverage"
+  alpha: 0.6
+  beta: 0.4
+  tie_break: ["score", "F1", "coverage", "generation_order_negated"]
+  f_m: null                  # TBD (2.5) — number of top candidates retained
+  admissibility:
+    conformance_required: true
+    satisfiability_required: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Encoders (D12) — actual pins recorded in data/encoder_versions.txt
+# ─────────────────────────────────────────────────────────────────────────────
+encoders:
+  retrieval: "nomic-embed-text"
+  matching: "all-mpnet-base-v2"
+  pins_file: "data/encoder_versions.txt"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Frozen artefacts (D5, D6) — hashes recorded in data/frozen/
+# ─────────────────────────────────────────────────────────────────────────────
+frozen_artefacts:
+  hashes_file: "data/frozen/protocol.sha256"
+  paths:
+    - "prompts/fm_prompt_template.txt"
+    - "prompts/feature-model-schema.xsd"
+    - "config/experiment.yaml"
+    # D22 orderings.json — added in Phase 3.7
+    # D4 attribution.csv per corpus — added in Phase 3.5
+    # D21 feature_partition.csv per corpus — added in Phase 3.6
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Open decisions (non-blocking; do not block campaign start)
+# ─────────────────────────────────────────────────────────────────────────────
+open_decisions:
+  k_doc: "P4 — set after chunks-per-document measured"
+  f_m: "2.5 — retained candidate count for Top-FM analysis"
+  sat_solver: "2.6 — name + version + pin"
+  expert_rubric: "2.7 — wording"
+  judge_model: "P9 — evaluator LLM for D18/D19 (avoid self-preference bias)"

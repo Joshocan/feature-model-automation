@@ -123,30 +123,31 @@ PROVENANCE:
 Every feature carries exactly one <description> element of at least one full sentence,
 grounded in the evidence.
 
-Every description, without exception, ends with a trace in exactly this form, as the
-final characters of the description:
+Every description, without exception, ends with a source marker in exactly this form,
+as the final characters of the description:
 
-  Trace: [id1, id2]
+  [src: id1, id2]
 
-Rules for the trace:
+Rules for the marker:
+  - The marker is a single bracketed token, opened by "[src: " and closed by "]".
   - Use ONLY document identifiers listed under DOCUMENT IDS IN THIS CONTEXT below.
   - Identifiers exactly as given. Do not abbreviate, reformat or invent them.
   - Separate multiple identifiers with a comma and a space.
   - At least one identifier. No section numbers, headings, titles or page numbers.
   - Nothing after the closing bracket.
 
-Abstract features carry a trace as well. An abstract feature exists to group its
-children, so its trace lists the identifiers supporting the features grouped beneath
+Abstract features carry a marker as well. An abstract feature exists to group its
+children, so its marker lists the identifiers supporting the features grouped beneath
 it. Do not cite a document for an abstract feature unless that document supports at
 least one feature below it.
 
 Form of a description:
   <description>One sentence stating what the feature is, in the terms the evidence
-  uses. Trace: [ID_A, ID_B]</description>
+  uses. [src: ID_A, ID_B]</description>
 
 {% if previous_model %}
-Traces already present in the PREVIOUS FEATURE MODEL are kept unchanged, even when
-they name documents absent from this context. Add an identifier to an existing trace
+Markers already present in the PREVIOUS FEATURE MODEL are kept unchanged, even when
+they name documents absent from this context. Add an identifier to an existing marker
 only when this context provides further evidence for that same feature.
 {% endif %}
 

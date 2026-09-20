@@ -1,0 +1,40 @@
+# D12 — Encoder version pins (Phase 2.10)
+#
+# Frozen at campaign start. Any change here changes campaign identity.
+# TBD fields must be filled in Phase 4 before the retrieval index is built.
+
+# ─── Retrieval embedding (nomic-embed-text, via Ollama) ─────────────────────
+# Used to embed document chunks into the Chroma collection and to embed the
+# four fixed sub-queries at retrieval time. Silent update = silently different
+# RAG behaviour across the campaign.
+retrieval.embedding_model: nomic-embed-text
+retrieval.embedding_ollama_digest: TBD             # `ollama list nomic-embed-text` -> digest column
+retrieval.document_prefix: "search_document: "     # mandatory
+retrieval.query_prefix: "search_query: "           # mandatory
+
+# ─── Matching embedding (all-mpnet-base-v2, via sentence-transformers) ──────
+# Used only during scoring to compute cosine similarity between generated
+# and ground-truth feature names. Feeds D15 (match.csv). The tau sweep only
+# stays valid if this encoder is fixed.
+matching.embedding_model: all-mpnet-base-v2
+matching.hf_revision: TBD                          # HuggingFace commit SHA (huggingface_hub snapshot)
+matching.sentence_transformers_version: TBD       # `pip show sentence-transformers` -> Version
+
+# ─── Recording metadata ─────────────────────────────────────────────────────
+recorded_at: 2026-09-20
+recorded_by: Phase 2.10 seed
+recorded_in: config/experiment.yaml encoders block
+
+# ─── How to fill the TBD fields (Phase 4) ───────────────────────────────────
+# nomic:
+#   ollama pull nomic-embed-text
+#   ollama list | awk '/nomic-embed-text/ {print $3}'          # ID/digest
+#
+# all-mpnet-base-v2:
+#   python -c "\
+#     from huggingface_hub import snapshot_download; \
+#     import sentence_transformers as st; \
+#     p = snapshot_download('sentence-transformers/all-mpnet-base-v2'); \
+#     print('st:', st.__version__); \
+#     print('path:', p);"
+#   git -C <that path> rev-parse HEAD    # commit SHA if a git snapshot; otherwise use HF revision id
