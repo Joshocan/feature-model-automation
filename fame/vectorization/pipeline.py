@@ -1,180 +1,111 @@
+"""Corpus indexing orchestrator (Phase 4.6).
+
+Reads a canonical ``chunks.jsonl`` (D11), embeds each chunk with the mandatory
+``search_document:`` prefix, and writes to a persistent Chroma collection.
+
+One collection per corpus. The collection is **reset** on every call so a
+re-index is deterministic and can never accumulate stale entries from a
+previous preprocessing version.
+"""
 from __future__ import annotations
 
-import os
+import json
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 
-from fame.utils.runtime import workspace
-from fame.utils.dirs import ensure_dir
-
-from .chunks_loader import load_chunks_json, extract_chunks, normalize_chunk_record
-from .embeddings import OllamaEmbedder
-from .chroma_indexer import ChromaConfig, connect_client, get_or_create_collection, upsert_chunks
-
-
-PathLike = Union[str, Path]
+from .chroma_indexer import (
+    ChromaLocation,
+    open_client,
+    reset_collection,
+    upsert_chunks,
+)
+from .embeddings import OllamaEmbedder, Embedder
 
 
-def default_collection_name(chunks_json_path: Path) -> str:
-    """
-    Stable-ish default: <filename-without-suffix> (and strip extra '.pdf' if present).
-    Example: paper.pdf.chunks.json -> paper
-    """
-    name = chunks_json_path.name
-    # remove .chunks.json
-    if name.endswith(".chunks.json"):
-        name = name[: -len(".chunks.json")]
-    # remove final .pdf if present
-    if name.lower().endswith(".pdf"):
-        name = name[:-4]
-    return name.replace(" ", "_")
+@dataclass
+class IndexBuildReport:
+    corpus: str
+    location: ChromaLocation
+    chunks_read: int
+    chunks_upserted: int
+    chunks_failed: int
 
 
-def index_chunks_json(
-    chunks_json: PathLike,
-    collection: Optional[str] = None,
-    batch_size: int = 24,
-) -> Dict[str, Any]:
-    """
-    Read a single <file>.chunks.json and index its chunks into Chroma.
-
-    Env vars:
-      - OLLAMA_HOST / OLLAMA_EMBED_MODEL
-      - CHROMA_MODE (persistent|http), CHROMA_PATH, CHROMA_HOST, CHROMA_PORT
-    """
-    ws = workspace("vectorize", base_dir=os.getenv("FAME_BASE_DIR"))
-    paths = ws.paths
-
-    chunks_json_path = Path(chunks_json).expanduser().resolve()
-    if not chunks_json_path.exists():
-        raise FileNotFoundError(f"Chunks JSON not found: {chunks_json_path}")
-
-    # default chroma path is your vector_db_dir
-    cfg = ChromaConfig.from_env(default_path=paths.vector_db)
-    client = connect_client(cfg)
-
-    payload = load_chunks_json(chunks_json_path)
-    raw_chunks = extract_chunks(payload)
-
-    normalized: List[Dict[str, Any]] = []
-    for c in raw_chunks:
-        try:
-            normalized.append(normalize_chunk_record(c))
-        except Exception as e:
-            print(f"WARN:  Skipping invalid chunk: {e}")
-
-    if not normalized:
-        return {"collection": collection or default_collection_name(chunks_json_path), "added": 0, "failed": 0}
-
-    ids = [c["chunk_id"] for c in normalized]
-    docs = [c["text"] for c in normalized]
-    metas = []
-    for c in normalized:
-        m = dict(c["metadata"])
-        m.setdefault("embedding_model", os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text"))
-        metas.append(m)
-
-    col_name = collection or default_collection_name(chunks_json_path)
-    col = get_or_create_collection(client, col_name, metadata={"source_chunks": str(chunks_json_path.name)})
-
-    embedder = OllamaEmbedder()  # uses env vars if set
-    added, failed = upsert_chunks(col, ids=ids, documents=docs, metadatas=metas, embedder=embedder, batch_size=batch_size)
-
-    return {"collection": col_name, "added": added, "failed": failed, "chroma_mode": cfg.mode}
+def _load_chunks_jsonl(path: Path) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    with open(path, "r", encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if line:
+                out.append(json.loads(line))
+    return out
 
 
-def index_all_chunks(
-    chunks_dir: Optional[PathLike] = None,
-    batch_size: int = 24,
-    collection_prefix: str = "",
-) -> Dict[str, Any]:
-    """
-    Index all *.chunks.json under processed_data/chunks.
+def build_index(
+    *,
+    corpus: str,
+    chunks_jsonl: str | Path,
+    chroma_root: str | Path,
+    embedder: Optional[Embedder] = None,
+    batch_size: int = 32,
+    on_progress: Optional[Callable[[int, int], None]] = None,
+) -> IndexBuildReport:
+    """Build the Chroma collection for one corpus from its chunks.jsonl."""
+    chunks_jsonl = Path(chunks_jsonl).expanduser().resolve()
+    if not chunks_jsonl.exists():
+        raise FileNotFoundError(f"chunks.jsonl not found: {chunks_jsonl}")
 
-    collection name = <collection_prefix><default_collection_name(file)>
-    """
-    ws = workspace("vectorize", base_dir=os.getenv("FAME_BASE_DIR"))
-    paths = ws.paths
+    chunks = _load_chunks_jsonl(chunks_jsonl)
+    location = ChromaLocation.for_corpus(chroma_root, corpus)
+    client = open_client(location.path)
+    coll = reset_collection(
+        client,
+        name=location.collection_name,
+        metadata={
+            "corpus":                 corpus,
+            "chunks_source":          str(chunks_jsonl),
+            "preprocessing_version":  (chunks[0]["preprocessing_version"] if chunks else ""),
+            "embedding_model":        "nomic-embed-text",
+            "document_prefix":        "search_document: ",
+        },
+    )
 
-    default_dir = paths.processed_data / "chunks"
-    d = Path(chunks_dir).expanduser().resolve() if chunks_dir else default_dir
-    ensure_dir(d)
+    ids = [c["chunk_id"] for c in chunks]
+    documents = [c["text"] for c in chunks]
+    metadatas = [
+        {
+            "doc_id":                c["doc_id"],
+            "offset_start":          c["offsets"][0],
+            "offset_end":            c["offsets"][1],
+            "preprocessing_version": c["preprocessing_version"],
+        }
+        for c in chunks
+    ]
 
-    files = sorted(d.glob("*.chunks.json"))
-    results: List[Dict[str, Any]] = []
+    embedder = embedder or OllamaEmbedder()
 
-    for f in files:
-        col = f"{collection_prefix}{default_collection_name(f)}"
-        r = index_chunks_json(f, collection=col, batch_size=batch_size)
-        results.append(r)
+    added_total = 0
+    failed_total = 0
+    for start in range(0, len(ids), batch_size):
+        end = min(start + batch_size, len(ids))
+        added, failed = upsert_chunks(
+            coll,
+            ids=ids[start:end],
+            documents=documents[start:end],
+            metadatas=metadatas[start:end],
+            embedder=embedder,
+            batch_size=batch_size,
+        )
+        added_total += added
+        failed_total += failed
+        if on_progress:
+            on_progress(end, len(ids))
 
-    return {"indexed_files": len(files), "results": results}
-
-
-def index_all_chunks_one_collection(
-    chunks_dir: Optional[PathLike] = None,
-    batch_size: int = 24,
-    collection_name: str = "fame_all",
-) -> Dict[str, Any]:
-    """
-    Index all *.chunks.json into a single collection (one_collection mode).
-    """
-    ws = workspace("vectorize", base_dir=os.getenv("FAME_BASE_DIR"))
-    paths = ws.paths
-
-    default_dir = paths.processed_data / "chunks"
-    d = Path(chunks_dir).expanduser().resolve() if chunks_dir else default_dir
-    ensure_dir(d)
-
-    files = sorted(d.glob("*.chunks.json"))
-    if not files:
-        return {"collection": collection_name, "indexed_files": 0, "added": 0, "failed": 0}
-
-    cfg = ChromaConfig.from_env(default_path=paths.vector_db)
-    client = connect_client(cfg)
-    col = get_or_create_collection(client, collection_name, metadata={"source_chunks": "one_collection"})
-
-    embedder = OllamaEmbedder()
-
-    total_added = 0
-    total_failed = 0
-    per_file: List[Dict[str, Any]] = []
-
-    for f in files:
-        payload = load_chunks_json(f)
-        raw_chunks = extract_chunks(payload)
-        normalized: List[Dict[str, Any]] = []
-        for c in raw_chunks:
-            try:
-                n = normalize_chunk_record(c)
-                # prefix chunk_id to avoid collisions across files
-                n["chunk_id"] = f"{f.stem}:{n['chunk_id']}"
-                normalized.append(n)
-            except Exception as e:
-                print(f"WARN:  Skipping invalid chunk from {f.name}: {e}")
-        if not normalized:
-            per_file.append({"file": f.name, "added": 0, "failed": 0})
-            continue
-
-        ids = [c["chunk_id"] for c in normalized]
-        docs = [c["text"] for c in normalized]
-        metas = []
-        for c in normalized:
-            m = dict(c["metadata"])
-            m.setdefault("embedding_model", os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text"))
-            m["source_file"] = f.name
-            metas.append(m)
-
-        added, failed = upsert_chunks(col, ids=ids, documents=docs, metadatas=metas, embedder=embedder, batch_size=batch_size)
-        total_added += added
-        total_failed += failed
-        per_file.append({"file": f.name, "added": added, "failed": failed})
-
-    return {
-        "collection": collection_name,
-        "indexed_files": len(files),
-        "added": total_added,
-        "failed": total_failed,
-        "files": per_file,
-        "chroma_mode": cfg.mode,
-    }
+    return IndexBuildReport(
+        corpus=corpus,
+        location=location,
+        chunks_read=len(chunks),
+        chunks_upserted=added_total,
+        chunks_failed=failed_total,
+    )

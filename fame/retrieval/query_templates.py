@@ -1,51 +1,46 @@
+"""Fixed retrieval sub-queries (frozen in Phase 2.9).
+
+Four sub-queries, identical at every step, in both RAG arms, independent of
+generation state. **Never query with the current feature model** — that
+confounds H1b with a feedback effect (see brief §1). The strings below must
+match ``config/experiment.yaml`` verbatim; the source of truth is that config
+file, and this module simply loads and validates it.
+"""
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
-from typing import Dict, Optional
+from pathlib import Path
+from typing import List
+
+import yaml
+
+# Repo root — used for the default config lookup.
+_REPO = Path(__file__).resolve().parents[2]
+_DEFAULT_CFG = _REPO / "config/experiment.yaml"
+
+_DOMAIN_PLACEHOLDER = re.compile(r"\{domain\}", re.IGNORECASE)
 
 
-DEFAULT_RAG_QUERY_TEMPLATE = """({{ROOT_FEATURE}} AND {{DOMAIN}})
-AND (
-  approach OR methodology OR method OR framework OR architecture OR design
-  OR implementation OR pipeline OR workflow OR algorithm OR technique
-  OR system OR tool OR platform OR infrastructure
-)"""
+def load_sub_queries(config_path: Path | str = _DEFAULT_CFG) -> List[str]:
+    """Load the four fixed sub-queries verbatim from ``experiment.yaml``."""
+    cfg = yaml.safe_load(Path(config_path).read_text())
+    qs = list(cfg["retrieval"]["sub_queries"])
+    if len(qs) != 4:
+        raise ValueError(
+            f"experiment.yaml must define exactly 4 retrieval.sub_queries, got {len(qs)}"
+        )
+    for q in qs:
+        if not q.startswith("search_query: "):
+            raise ValueError(
+                f"every retrieval sub-query must start with 'search_query: ' — got: {q!r}"
+            )
+    return qs
 
 
-@dataclass(frozen=True)
-class QueryContext:
-    root_feature: str
-    domain: str
-    extra: Optional[Dict[str, str]] = None
+def format_sub_query(template: str, *, domain: str) -> str:
+    """Substitute ``{domain}`` in a sub-query template.
 
-
-def _clean_token(s: str) -> str:
+    The placeholder is the only permitted templating: nothing about
+    the feature model may leak into the query.
     """
-    Minimal cleanup:
-    - strips whitespace/newlines
-    - removes braces to avoid placeholder injection
-    - collapses spaces
-    """
-    s = (s or "").strip()
-    s = re.sub(r"[\r\n\t]+", " ", s)
-    s = re.sub(r"\s+", " ", s)
-    s = s.replace("{", "").replace("}", "")
-    return s.strip()
-
-
-def build_query(ctx: QueryContext, template: str = DEFAULT_RAG_QUERY_TEMPLATE) -> str:
-    """
-    Fill {{ROOT_FEATURE}} and {{DOMAIN}} placeholders.
-    """
-    q = template
-    q = q.replace("{{ROOT_FEATURE}}", _clean_token(ctx.root_feature))
-    q = q.replace("{{DOMAIN}}", _clean_token(ctx.domain))
-
-    if ctx.extra:
-        for k, v in ctx.extra.items():
-            q = q.replace(f"{{{{{k}}}}}", _clean_token(v))
-
-    # normalize whitespace but keep readability
-    q = re.sub(r"[ \t]+", " ", q).strip()
-    return q
+    return _DOMAIN_PLACEHOLDER.sub(domain, template)

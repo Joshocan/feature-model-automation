@@ -1,73 +1,64 @@
+"""Tests for the Phase 4b retrieval primitives.
+
+Covers:
+- Loading and validating the 4 fixed sub-queries from experiment.yaml
+- The ``search_query:`` prefix contract on every sub-query
+- Domain-placeholder substitution
+- The k_step splitting policy across 4 sub-queries (remainder-spread-first)
+
+These tests do not touch Chroma or Ollama. An integration test that hits a
+live index lives elsewhere (added in Phase 5).
+"""
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
 
-import chromadb
-
-from fame.utils.runtime import workspace
+from fame.retrieval.query_templates import format_sub_query, load_sub_queries
 from fame.retrieval.service import RetrievalService
-from fame.vectorization.chroma_indexer import ChromaConfig, connect_client
 
 
-def _list_collections(client) -> list[str]:
-    # Chroma python client differences across versions:
-    # - some have list_collections()
-    # - some return objects with .name
-    cols = []
-    try:
-        got = client.list_collections()
-        for c in got:
-            name = getattr(c, "name", None) or (c.get("name") if isinstance(c, dict) else None)
-            if name:
-                cols.append(str(name))
-    except Exception:
-        pass
-    return cols
+REPO = Path(__file__).resolve().parents[1]
 
 
-@pytest.mark.integration
-def test_retrieval_returns_results() -> None:
-    """
-    Integration test:
-      - assumes vectorization already indexed at least one collection
-      - runs retrieval with the default query template
-      - asserts we get at least 1 evidence chunk
-    """
-    ws = workspace("vectorize", base_dir=os.getenv("FAME_BASE_DIR"))
-    paths = ws.paths
+def test_experiment_yaml_defines_four_sub_queries() -> None:
+    qs = load_sub_queries(REPO / "config/experiment.yaml")
+    assert len(qs) == 4
 
-    cfg = ChromaConfig.from_env(default_path=paths.vector_db)
-    client = connect_client(cfg)
 
-    cols = _list_collections(client)
-    if not cols:
-        pytest.skip(
-            "No Chroma collections found. Run vectorization first "
-            "(scripts/run_vectorization.py or scripts/preprocessing_for_rag.py)."
-        )
+def test_every_sub_query_carries_the_query_prefix() -> None:
+    qs = load_sub_queries(REPO / "config/experiment.yaml")
+    for q in qs:
+        assert q.startswith("search_query: "), q
 
-    # Use first 1-3 collections for test (works for SS/MS/IS)
-    use_cols = cols[:3]
 
-    retr = RetrievalService(base_dir=os.getenv("FAME_BASE_DIR"))
-    res = retr.retrieve(
-        root_feature=os.getenv("TEST_ROOT_FEATURE", "Model Federation"),
-        domain=os.getenv("TEST_DOMAIN", "Model-Driven Engineering"),
-        collections=use_cols,
-        n_results_per_collection=int(os.getenv("TEST_RAG_K", "3")),
-        max_total_results=int(os.getenv("TEST_RAG_MAX_TOTAL", "6")),
-    )
+def test_domain_placeholder_substitution() -> None:
+    t = "search_query: what {domain} approach this paper proposes"
+    assert format_sub_query(t, domain="model repair") == \
+           "search_query: what model repair approach this paper proposes"
 
-    assert res.query and isinstance(res.query, str)
-    assert len(res.chunks) > 0, (
-        "Retrieval returned 0 chunks. "
-        "Check that collections contain documents and embeddings."
-    )
 
-    # sanity: each evidence chunk should have required fields
-    for ch in res.chunks:
-        assert ch.chunk_id
-        assert ch.text and len(ch.text.strip()) > 10
+def test_split_k_even() -> None:
+    assert RetrievalService.split_k(8) == [2, 2, 2, 2]
+
+
+def test_split_k_with_remainder_spreads_first() -> None:
+    # 5 across 4 → [2, 1, 1, 1]
+    assert RetrievalService.split_k(5) == [2, 1, 1, 1]
+    # 7 across 4 → [2, 2, 2, 1]
+    assert RetrievalService.split_k(7) == [2, 2, 2, 1]
+    # 3 across 4 → [1, 1, 1, 0]  (fewer results than sub-queries)
+    assert RetrievalService.split_k(3) == [1, 1, 1, 0]
+
+
+def test_split_k_rejects_nonpositive() -> None:
+    with pytest.raises(ValueError):
+        RetrievalService.split_k(0)
+    with pytest.raises(ValueError):
+        RetrievalService.split_k(-1)
+
+
+def test_split_k_unknown_policy_raises() -> None:
+    with pytest.raises(ValueError):
+        RetrievalService.split_k(4, remainder_policy="round_robin")
