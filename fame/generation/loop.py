@@ -61,6 +61,10 @@ def _read_ordering(orderings_json: Path, corpus: str, ordering_id: str) -> List[
     return list(data[corpus][ordering_id]["order"])
 
 
+class RunAlreadyExists(RuntimeError):
+    """Raised when a run directory holds artefacts and ``force`` is False."""
+
+
 def run_generation(
     *,
     config: RunConfig,
@@ -72,6 +76,7 @@ def run_generation(
     retrieval_service: Optional[Any] = None,   # fame.retrieval.RetrievalService
     results_root: Path | str = "results",
     token_counter: Optional[TokenCounter] = None,
+    force: bool = False,
 ) -> RunResult:
     """Execute one full run per :class:`RunConfig`.
 
@@ -97,11 +102,32 @@ def run_generation(
         config_hash=config.config_hash(),
         run_id=config.run_id(),
     )
-    paths.ensure_dirs()
 
-    # Reset context log for this run (idempotent replay).
-    if paths.context_log.exists():
-        paths.context_log.unlink()
+    # 6.V5 resume guard — refuse to overwrite unless force=True.
+    existing = []
+    if paths.fm_gen.exists():
+        existing.append(paths.fm_gen.name)
+    if paths.fm_iter_dir.exists() and any(paths.fm_iter_dir.iterdir()):
+        existing.append(f"{paths.fm_iter_dir.name}/")
+    if paths.context_log.exists() and paths.context_log.stat().st_size > 0:
+        existing.append(paths.context_log.name)
+    if paths.run_meta.exists():
+        existing.append(paths.run_meta.name)
+    if existing and not force:
+        raise RunAlreadyExists(
+            f"run {config.run_id()} already has artefacts under {paths.root}: "
+            f"{existing}. Pass force=True to overwrite."
+        )
+    if existing and force:
+        # Explicit reset — remove all prior artefacts.
+        for p in [paths.fm_gen, paths.context_log, paths.run_meta]:
+            if p.exists():
+                p.unlink()
+        if paths.fm_iter_dir.exists():
+            for p in paths.fm_iter_dir.iterdir():
+                p.unlink()
+
+    paths.ensure_dirs()
 
     # Write config snapshot up front so a crash leaves the intent visible.
     atomic_write_json(paths.root / "run_config.json", config.canonical_dict())

@@ -18,7 +18,7 @@ from .llm_client import (
     OpenAILLM,
     make_client,
 )
-from .loop import RunResult, run_generation
+from .loop import RunAlreadyExists, RunResult, run_generation
 from .persistence import RunPaths, atomic_write_json, atomic_write_text
 from .prompt_assembly import PromptBundle, render_prompt
 from .run import RunConfig
@@ -44,6 +44,7 @@ __all__ = [
     "OpenAILLM",
     "make_client",
     # loop
+    "RunAlreadyExists",
     "RunResult",
     "run_generation",
     # persistence
