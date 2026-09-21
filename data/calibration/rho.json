@@ -1,0 +1,16 @@
+{
+  "federation": {
+    "F_t": 130,
+    "F_t_attested": 36,
+    "F_t_organising": 94,
+    "reach_size": 36,
+    "rho": 0.2769
+  },
+  "repair": {
+    "F_t": 100,
+    "F_t_attested": 58,
+    "F_t_organising": 42,
+    "reach_size": 58,
+    "rho": 0.58
+  }
+}
