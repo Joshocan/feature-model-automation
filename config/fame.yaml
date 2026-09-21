@@ -27,7 +27,8 @@ services:
     startup_timeout_s: 60
     force_restart: false
     embed_model: "nomic-embed-text"
-    llm_model: "gpt-oss:120b-cloud"
+    # Generation llm_model settings moved to config/experiment.yaml (generation_models block).
+    llm_model: ""
     # Auth (optional)
     api_key_env: "OLLAMA_API_KEY"
     api_key_file: "api_keys/ollama_key.txt"
@@ -44,12 +45,10 @@ services:
     api_key_dir: "api_keys"
     temperature: 0.2
     max_tokens: 16000
-    model_max_tokens:
-      gpt-4.1: 32000
-      o3: 32000
-      gemini-3.1-pro-preview: 65536
-      gemini-2.5-flash: 32000
-      claude-opus-4-5: 64000
+    # Per-model max_tokens for judge/evaluator LLMs. Retired-model entries
+    # were removed in Phase 1 Pass B; refill for the actual judge model
+    # chosen for Phase 8/RQ7.
+    model_max_tokens: {}
     timeout_s: 120
 
 data:
@@ -96,56 +95,12 @@ context:
   order: "by_page_then_id"     # as_is | by_page_then_id | by_id
   include_headers: true
 
-pipelines:
-  # ---------- RAG pipelines ----------
-  ss_rgfm:
-    enabled: true
-    prompt_path: "prompts/fm_extraction_prompt.txt"
-
-  ms_rgfm:
-    enabled: true
-
-  is_rgfm:
-    enabled: true
-    initial_prompt_path: "prompts/fm_extraction_prompt.txt"
-    iter_prompt_path: "prompts/fm_iterated_prompt.txt"
-    retry_backoff_base_seconds: 2.0
-    retry_backoff_cap_seconds: 60.0
-    inter_iteration_sleep_seconds: 1.0
-
-  # ---------- NON-RAG pipelines ----------
-  ss_nonrag:
-    enabled: true
-    prompt_path: ""            # optional file path; leave empty to use default
-    context_budget:
-      max_total_chars: 140000
-      max_chunks: 120
-      max_chunk_chars: 6000
-    temperature: 0.2
-
-  is_nonrag:
-    enabled: true
-    prompt_path: ""            # optional; otherwise uses default internal template
-    prompt_paths:
-      initial: "prompts/fm_extraction_prompt.txt"
-      iter: "prompts/fm_iterated_prompt.txt"
-    delta_budget:
-      max_delta_chars: 50000
-      max_delta_chunks: 50
-      max_delta_chunk_chars: 6000
-    temperature: 0.2
-    retry_backoff_base_seconds: 2.0
-    retry_backoff_cap_seconds: 60.0
-    inter_iteration_sleep_seconds: 1.0
-
-  # ---------- Core-metamodel track (used by fame_web) ----------
-  # Documentation-only block. fame_web passes these paths explicitly
-  # to the IS scripts via --initial-prompt-path / --iter-prompt-path.
-  # The feature-model track above (is_rgfm / is_nonrag) is unaffected
-  # and continues to be used for standalone CLI runs of the FM project.
-  is_core_structure:
-    initial_prompt_path: "prompts/core_structure_metamodel_extraction.txt"
-    iter_prompt_path:    "prompts/core_structure_metamodel_extraction_iterated.txt"
+# NOTE: The legacy `pipelines:` block (ss_rgfm, is_rgfm, ss_nonrag, is_nonrag,
+# is_core_structure) was removed in Phase 1 Pass B alongside fame/rag/ and
+# fame/nonrag/. The unified N-step generation loop is configured entirely from
+# config/experiment.yaml. This file is retained only for legacy tooling
+# (chroma/ollama services, evaluation defaults) still consumed by helper
+# scripts.
 
 outputs:
   # All under results/ by default; dirs.py defines exact structure.
