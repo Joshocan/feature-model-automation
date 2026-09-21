@@ -37,6 +37,7 @@ from fame.generation.token_budget import (  # noqa: E402
     UniversalCounter,
 )
 from fame.retrieval import RetrievalService  # noqa: E402
+from fame.validation import validate_run    # noqa: E402
 
 
 def _hash_file(path: Path) -> str:
@@ -61,6 +62,12 @@ def _cli() -> argparse.Namespace:
     p.add_argument("--no-metamodel-block", dest="metamodel_block", action="store_false",
                    help="Ablation arm — omit metamodel prompt block.")
     p.add_argument("--results-root", default=str(REPO / "results"))
+    p.add_argument("--host", default=None,
+                   help="Override LLM host (e.g. http://127.0.0.1:11434 for local Ollama).")
+    p.add_argument("--validate", action="store_true",
+                   help="Run the Phase 6 validator on the produced run directory.")
+    p.add_argument("--force", action="store_true",
+                   help="Overwrite the run directory if it already exists.")
     return p.parse_args()
 
 
@@ -140,6 +147,8 @@ def main() -> int:
     if args.provider == "ollama_cloud":
         llm_kwargs["api_key_env"] = "OLLAMA_API_KEY"
         llm_kwargs["api_key_file"] = "api_keys/ollama_key.txt"
+    if args.host:
+        llm_kwargs["host"] = args.host
     llm = make_client(provider=args.provider, model_id=model_id, **llm_kwargs)
 
     retrieval_service = None
@@ -167,6 +176,7 @@ def main() -> int:
         retrieval_service=retrieval_service,
         results_root=args.results_root,
         token_counter=counter,
+        force=args.force,
     )
 
     print()
@@ -183,6 +193,15 @@ def main() -> int:
     print(f"  fm_iter/:   {len(list(result.paths.fm_iter_dir.glob('*.xml')))} files")
     print(f"  context_log.jsonl: {result.paths.context_log.stat().st_size if result.paths.context_log.exists() else 0} bytes")
     print(f"  run_meta.json:     {result.paths.run_meta.stat().st_size if result.paths.run_meta.exists() else 0} bytes")
+
+    if args.validate:
+        print()
+        print(f"===== validator =====")
+        report = validate_run(result.paths.root, repo_root=REPO)
+        print(f"  complete: {report.complete}  errors: {report.n_errors}  warnings: {report.n_warnings}")
+        for f in report.findings:
+            print(f"  [{f.severity.value:7s}] {f.check}: {f.detail}")
+        return 0 if report.complete else 1
 
     return 0
 
