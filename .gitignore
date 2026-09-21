@@ -29,6 +29,7 @@ temp/
 tmp/
 # results/
 data/processed/
+data/chroma/
 data/chroma_db*
 data/ollama/
 results/**/images/
@@ -36,6 +37,7 @@ results/**/reports/
 results/non_rag/
 results/rag/
 results/modified_prompts/
+results/smoke-*/
 scripts/internal_scripts/
 *.log
 *.pid

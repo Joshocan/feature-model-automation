@@ -8,7 +8,10 @@
 # four fixed sub-queries at retrieval time. Silent update = silently different
 # RAG behaviour across the campaign.
 retrieval.embedding_model: nomic-embed-text
-retrieval.embedding_ollama_digest: TBD             # `ollama list nomic-embed-text` -> digest column
+retrieval.embedding_model_tag: latest
+retrieval.embedding_ollama_digest: 0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f
+retrieval.embedding_parameter_size: 137M
+retrieval.embedding_size_bytes: 274302450
 retrieval.document_prefix: "search_document: "     # mandatory
 retrieval.query_prefix: "search_query: "           # mandatory
 
