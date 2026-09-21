@@ -1,16 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <featureModel>
-  <properties>
-    <graphics key="autolayoutconstraints" value="false" />
-    <graphics key="legendposition" value="625,12" />
-    <graphics key="legendautolayout" value="false" />
-    <graphics key="showconstraints" value="true" />
-    <graphics key="showshortnames" value="false" />
-    <graphics key="layout" value="vertical" />
-    <graphics key="showcollapsedconstraints" value="true" />
-    <graphics key="legendhidden" value="false" />
-    <graphics key="layoutalgorithm" value="4" />
-  </properties>
   <struct>
     <and abstract="true" mandatory="true" name="Model_Management">
       <and name="Model_Federation" abstract="true">
@@ -21,19 +10,16 @@
 					meaningful relations that explicit how and why models are
 					related to each other
 				</description>
-        <graphics key="collapsed" value="false" />
         <and mandatory="true" name="Structural" abstract="true">
           <description>
 						The graph’s constituents (the nature of vertices; and how edges are organised as
 						well as what they represent), as well as the whole graph.
 					</description>
-          <graphics key="collapsed" value="true" />
           <and mandatory="true" name="Artefacts" abstract="true">
             <description>
 							Vertices correspond to Artefacts, as well as the elements
 							they contain
 						</description>
-            <graphics key="collapsed" value="true" />
             <and mandatory="true" name="Domain" abstract="true">
               <description>
 								The Domain(s) the Artefacts are intended to be used in. In [1],
@@ -41,19 +27,17 @@
 								extend it with domains outside of CPS.
 								[1] : https://doi.org/10.1016/B978-0-12-819105-7.00008-8
 							</description>
-              <graphics key="collapsed" value="true" />
-              <feature name="X_Domain" />
+              <feature name="X_Domain"/>
               <and name="CPS_Domain" abstract="true">
-                <graphics key="collapsed" value="true" />
-                <feature name="CriticalInfrastructure" />
-                <feature name="BuildingAutomation" />
-                <feature name="SmartManufacturing" />
-                <feature name="Transportation" />
-                <feature name="Defense" />
-                <feature name="Health" />
-                <feature name="EmergencyResponse" />
-                <feature name="ProcessControl" />
-                <feature name="RoboticForService" />
+                <feature name="CriticalInfrastructure"/>
+                <feature name="BuildingAutomation"/>
+                <feature name="SmartManufacturing"/>
+                <feature name="Transportation"/>
+                <feature name="Defense"/>
+                <feature name="Health"/>
+                <feature name="EmergencyResponse"/>
+                <feature name="ProcessControl"/>
+                <feature name="RoboticForService"/>
               </and>
             </and>
             <and mandatory="true" name="TechSpace" abstract="true">
@@ -68,12 +52,10 @@
 								Technological spaces: An initial appraisal. In 4th International
 								Symposium on Distributed Objects and Applications, DOA 2002.
 							</description>
-              <graphics key="collapsed" value="true" />
               <and name="EMOF" abstract="true">
-                <graphics key="collapsed" value="true" />
-                <feature name="Ecore" />
+                <feature name="Ecore"/>
               </and>
-              <feature name="Ad_hoc_Internal_TechSpace" />
+              <feature name="Ad_hoc_Internal_TechSpace"/>
             </and>
             <and mandatory="true" name="Formalism" abstract="true">
               <description>
@@ -82,98 +64,84 @@
 								we use as a basis for our description.
 								[1] : https://zenodo.org/record/2533455
 							</description>
-              <graphics key="collapsed" value="true" />
               <and name="AutomataBased" abstract="true">
-                <graphics key="collapsed" value="true" />
-                <feature name="AbstractStateMachines" />
-                <feature name="CellularAutomata" />
+                <feature name="AbstractStateMachines"/>
+                <feature name="CellularAutomata"/>
                 <and name="HybridAutomataBased" abstract="true">
-                  <graphics key="collapsed" value="true" />
-                  <feature name="HybridAutomata" />
-                  <feature name="IOHybridAutomata" />
-                  <feature name="LinearHybridAutomata" />
-                  <feature name="NonLinearHybridAutomata" />
-                  <feature name="StochasticHybridAutomata" />
+                  <feature name="HybridAutomata"/>
+                  <feature name="IOHybridAutomata"/>
+                  <feature name="LinearHybridAutomata"/>
+                  <feature name="NonLinearHybridAutomata"/>
+                  <feature name="StochasticHybridAutomata"/>
                 </and>
                 <and name="TimedAutomata" abstract="true">
-                  <graphics key="collapsed" value="true" />
-                  <feature name="ProbabilisticTimedAutomata" />
-                  <feature name="StochasticTimedAutomata" />
-                  <feature name="IOTimedAutomata" />
+                  <feature name="ProbabilisticTimedAutomata"/>
+                  <feature name="StochasticTimedAutomata"/>
+                  <feature name="IOTimedAutomata"/>
                 </and>
               </and>
               <and name="PetriNetBased" abstract="true">
-                <graphics key="collapsed" value="true" />
-                <feature name="HighLevelPetriNet" />
-                <feature name="PetriNet" />
-                <feature name="PriorityPetriNet" />
-                <feature name="StochasticPetriNet" />
-                <feature name="TimedPetriNet" />
+                <feature name="HighLevelPetriNet"/>
+                <feature name="PetriNet"/>
+                <feature name="PriorityPetriNet"/>
+                <feature name="StochasticPetriNet"/>
+                <feature name="TimedPetriNet"/>
               </and>
               <and name="LogicBased" abstract="true">
-                <graphics key="collapsed" value="true" />
-                <feature name="FirstOrderLogic" />
+                <feature name="FirstOrderLogic"/>
                 <and name="TemporalLogic" abstract="true">
-                  <graphics key="collapsed" value="true" />
-                  <feature name="LinearTemporalLogic" />
-                  <feature name="ComputationTreeLogic" />
-                  <feature name="Hennessy_MilnerLogic" />
+                  <feature name="LinearTemporalLogic"/>
+                  <feature name="ComputationTreeLogic"/>
+                  <feature name="Hennessy_MilnerLogic"/>
                 </and>
               </and>
               <and name="FlowBased" abstract="true">
-                <graphics key="collapsed" value="true" />
-                <feature name="DataFlow" />
-                <feature name="HybridFlow" />
-                <feature name="NewFeature" />
+                <feature name="DataFlow"/>
+                <feature name="HybridFlow"/>
+                <feature name="NewFeature"/>
               </and>
-              <feature name="ComplexNetworks" />
-              <feature name="BayesianNetworks" />
-              <feature name="BondGraphs" />
-              <feature name="CausalBlockDiagram" />
-              <feature name="Formalism_Agnostic" />
-              <feature name="X_Formalism" />
-              <feature name="DifferentialEquations" />
-              <feature name="DiscontinuousSystems" />
-              <feature name="DiscreteEvent" />
-              <feature name="ElectricalLinearNetworks" />
-              <feature name="EntityRelationship" />
-              <feature name="FaultTrees" />
-              <feature name="MarkovChains" />
-              <feature name="ProcessAlgebras" />
-              <feature name="TimedFailurePropagationGraph" />
-              <feature name="ViennaDevelopmentMethod" />
+              <feature name="ComplexNetworks"/>
+              <feature name="BayesianNetworks"/>
+              <feature name="BondGraphs"/>
+              <feature name="CausalBlockDiagram"/>
+              <feature name="Formalism_Agnostic"/>
+              <feature name="X_Formalism"/>
+              <feature name="DifferentialEquations"/>
+              <feature name="DiscontinuousSystems"/>
+              <feature name="DiscreteEvent"/>
+              <feature name="ElectricalLinearNetworks"/>
+              <feature name="EntityRelationship"/>
+              <feature name="FaultTrees"/>
+              <feature name="MarkovChains"/>
+              <feature name="ProcessAlgebras"/>
+              <feature name="TimedFailurePropagationGraph"/>
+              <feature name="ViennaDevelopmentMethod"/>
             </and>
             <and name="Serialisation" abstract="true">
               <description>The Serialisation format(s) used for persisting the Artefacts</description>
-              <graphics key="collapsed" value="true" />
-              <feature name="Serialisation_Agnostic" />
-              <feature name="DomainSpecific" />
+              <feature name="Serialisation_Agnostic"/>
+              <feature name="DomainSpecific"/>
               <and name="General" abstract="true">
-                <graphics key="collapsed" value="true" />
-                <feature name="XMI_XML" />
-                <feature name="RDF" />
-                <feature name="JSON" />
+                <feature name="XMI_XML"/>
+                <feature name="RDF"/>
+                <feature name="JSON"/>
               </and>
             </and>
           </and>
           <and mandatory="true" name="Links" abstract="true">
             <description>Edges correspond to Links</description>
-            <graphics key="collapsed" value="true" />
-            <and mandatory="true" name="Arity" abstract="true">
+            <alt mandatory="true" name="Arity" abstract="true">
               <description>Refers to the number of artefacts defining, and participating in a Link</description>
-              <graphics key="collapsed" value="true" />
-              <feature name="Binary" />
-              <feature name="N_ary" />
-            </and>
+              <feature name="Binary"/>
+              <feature name="N_ary"/>
+            </alt>
             <and mandatory="true" name="Granularity" abstract="true">
               <description>It refers to the specific ‘level’ of decomposition of the linked Artefacts</description>
-              <graphics key="collapsed" value="true" />
               <and name="Element" abstract="true">
                 <description>
 									A link exists at the Element level, meaning that structural prop-
 									erties (or model-elements) of the Artefacts are actually linked.
 								</description>
-                <graphics key="collapsed" value="false" />
                 <feature name="Reference">
                   <description>
 										The Link simply References the involved Elements, e.g. to indicate that
@@ -205,9 +173,8 @@
 								Semi-Automatic-ally generated through a matching process. This
 								case indeed relates to the Decomposable-ity of the Link Semantics.
 							</description>
-              <graphics key="collapsed" value="true" />
-              <feature name="Manual_Specification" />
-              <feature name="Semi_automated_Specification" />
+              <feature name="Manual_Specification"/>
+              <feature name="Semi_automated_Specification"/>
             </and>
             <feature name="Persistence">
               <description>
@@ -224,7 +191,6 @@
 								why, and for which purpose, the Artefacts are related
 								by the Links.
 							</description>
-              <graphics key="collapsed" value="true" />
               <feature name="Decomposable">
                 <description>
 									It is possible to define Links at a given Granularity, and
@@ -233,14 +199,13 @@
 								</description>
               </feature>
               <and mandatory="true" name="Links_Typology" abstract="true">
-                <graphics key="collapsed" value="false" />
-                <feature name="ConformsTo" />
-                <feature name="DecomposedIn" />
-                <feature name="TracedTo" />
-                <feature name="ElementOf" />
-                <feature name="RepresentationOf" />
-                <feature name="TransformedIn" />
-                <feature name="X_Type" />
+                <feature name="ConformsTo"/>
+                <feature name="DecomposedIn"/>
+                <feature name="TracedTo"/>
+                <feature name="ElementOf"/>
+                <feature name="RepresentationOf"/>
+                <feature name="TransformedIn"/>
+                <feature name="X_Type"/>
               </and>
               <feature name="Meta_model">
                 <description>
@@ -263,16 +228,14 @@
 							The structural features of the whole MF graph as a singular
 							entity are captured by the Federation feature
 						</description>
-            <graphics key="collapsed" value="true" />
             <feature name="Process">
               <description>
 								Creation and manipulation of the MF should follow a
 								predefined workflow
 							</description>
             </feature>
-            <and name="Reified" abstract="true">
+            <alt name="Reified" abstract="true">
               <description>The whole MF is manipulable (Artefacts and Links, together).</description>
-              <graphics key="collapsed" value="true" />
               <feature name="Explicit">
                 <description>
 									There exists another single Artefact that explicitly encodes
@@ -285,7 +248,7 @@
 									of Artefacts they need, by themselves
 								</description>
               </feature>
-            </and>
+            </alt>
           </and>
         </and>
         <and mandatory="true" name="Operational" abstract="true">
@@ -293,17 +256,15 @@
 						The processes and operations that are possible, explicitly or implicitly defined,
 						and how they compare with each other.
 					</description>
-          <graphics key="collapsed" value="true" />
           <and mandatory="true" name="Location" abstract="true">
             <description>
 							The Location feature describes where the operations
 							take place: they can be attached to the Links, to the Federation, or be
 							completely External to the MF.
 						</description>
-            <graphics key="collapsed" value="true" />
-            <feature name="External" />
-            <feature name="OnLinks" />
-            <feature name="InFederation" />
+            <feature name="External"/>
+            <feature name="OnLinks"/>
+            <feature name="InFederation"/>
           </and>
           <and mandatory="true" name="Operations_Typology" abstract="true">
             <description>
@@ -316,15 +277,14 @@
 							verifying properties over the MF. Note that this list of operations is
 							generalised and not exhaustive.
 						</description>
-            <graphics key="collapsed" value="true" />
-            <feature name="Query" />
-            <feature name="Represent" />
-            <feature name="Constrain" />
-            <feature name="V_and_V" />
-            <feature name="Synchronise" />
-            <feature name="X_Operation" />
+            <feature name="Query"/>
+            <feature name="Represent"/>
+            <feature name="Constrain"/>
+            <feature name="V_and_V"/>
+            <feature name="Synchronise"/>
+            <feature name="X_Operation"/>
           </and>
-          <and mandatory="true" name="Trigger" abstract="true">
+          <alt mandatory="true" name="Trigger" abstract="true">
             <description>
 							The Trigger is important as it specifies when an Opera-
 							tions shall be executed. An Operation may be triggered Manual-ly and
@@ -332,11 +292,10 @@
 							parameters from the concerned Artefacts or the MF itself (typically,
 							modifications in the MF)
 						</description>
-            <graphics key="collapsed" value="true" />
-            <feature name="Manual_Trigger" />
-            <feature name="Reactive_Trigger" />
-          </and>
-          <and mandatory="true" name="ExecutionMode" abstract="true">
+            <feature name="Manual_Trigger"/>
+            <feature name="Reactive_Trigger"/>
+          </alt>
+          <alt mandatory="true" name="ExecutionMode" abstract="true">
             <description>
 							Execution Mode. (a.k.a Exec_Mode) specifies how the Oper-
 							ation works. It may work in an Incremental fashion, meaning that
@@ -345,14 +304,12 @@
 							everything is recomputed from scratch at each operation invoca-
 							tion.
 						</description>
-            <graphics key="collapsed" value="true" />
-            <feature name="FullRebuild" />
-            <feature name="Incremental" />
-          </and>
+            <feature name="FullRebuild"/>
+            <feature name="Incremental"/>
+          </alt>
         </and>
         <and mandatory="true" name="Intentional" abstract="true">
           <description>Goals or purposes of creating the MF</description>
-          <graphics key="collapsed" value="true" />
           <feature name="CrossDomainAnalysis">
             <description>
 							Cross-domain analysis involves examining and integrating
@@ -415,7 +372,7 @@
 						conceptual model from various technical artefacts.
 					</description>
           </feature>
-          <feature name="X_Intention" />
+          <feature name="X_Intention"/>
         </and>
       </and>
     </and>
