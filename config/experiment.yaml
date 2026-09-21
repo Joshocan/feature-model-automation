@@ -65,10 +65,16 @@ retrieval:
     - "search_query: how the approach works, its mechanism, algorithm or procedure"
     - "search_query: the options, modes, variants and alternatives the approach supports"
     - "search_query: what the approach requires, assumes, or guarantees"
-  # k_doc — TBD in Phase 4 (must be strictly below measured chunks-per-document).
-  # k_doc_grid is the sweep intent for the retrieval-depth ablation (Phase 8.6).
-  k_doc: null
+  # k_doc frozen in Phase 4.9 based on measured chunks-per-document.
+  # Federation min = 17. Repair min = 5 (rep_15, an 11-page LNCS 2003 paper
+  # whose extractable text is ~5.4k chars — all four extractors agree).
+  # Values k_doc >= 5 on rep_15 at N=54 yield RAG == Non-RAG for that single
+  # batch (1.9% of the N=54 Repair arm). Reported as a threat to validity.
+  k_doc: 5
   k_doc_grid: [3, 5, 10, 15]
+  # Distribution across 4 sub-queries: floor(k_step / 4) each; remainder
+  # spread to the first (k_step % 4) sub-queries.
+  sub_query_remainder_policy: "spread_first"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Generation models (2.3 — frozen)
