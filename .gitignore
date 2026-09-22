@@ -37,7 +37,10 @@ results/**/reports/
 results/non_rag/
 results/rag/
 results/modified_prompts/
+results/smoke/
 results/smoke-*/
+results/pilot-*/
+results/*/run_matrix.json
 scripts/internal_scripts/
 *.log
 *.pid
