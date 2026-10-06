@@ -30,7 +30,7 @@ be only one generation engine.
 
 ```text
 config/
-  experiment.yaml
+  experiment.yamlw
 data/
   corpora/{repair,federation}/
   manifests/{repair,federation}.csv
@@ -249,7 +249,9 @@ Every attempt uses a stable `run_id` derived from campaign and full configuratio
 - **6.3** D9 `context_log.jsonl`: run, step, `N`, condition, batch IDs, chunk IDs, retrieval scores, query allocation, and `k_step`.
 - **6.4** D10 `run_meta.json`: model/version, hashes, temperature/reasoning, seed, ordering, `N`, assembled tokens, tokens in/out, wall time, attempts, finish reason, feasible and truncation flags, and failure details.
 - **6.5** D11 hash and D22 ordering identity used by the run.
-- **6.6** A validator marks a run complete only when required files are present, parseable, internally consistent, and match frozen campaign hashes.
+- **6.6** The validator reports execution completion, XSD validity, and overall
+  admissibility separately. It also checks required files, cross-artefact
+  consistency, and frozen campaign hashes.
 
 ### Exit gate
 
@@ -260,7 +262,9 @@ Every attempt uses a stable `run_id` derived from campaign and full configuratio
 
 ## Phase 7 — Pilot and campaign readiness
 
-- **7.1** Run one open-weight Repair arm at `N=54` to verify the 16,384 output-token cap. This is a systems pilot, not an outcome-scoring exercise.
+- **7.1** The systems pilots established a 32,768-token output allowance before
+  the measured campaign. Truncation remains a terminal outcome and is never
+  carried forward.
 - **7.2** Confirm actual context windows and token counting for every exact model version.
 - **7.3** Estimate call count, token use, cost, and elapsed time from logs.
 - **7.4** Confirm rate-limit/backoff behaviour and provider availability.
@@ -276,14 +280,26 @@ If a blocking setting changes, discard affected pilots/indexes, change campaign 
 
 ## Phase 8 — Execute the campaign
 
-Run in this order:
+The two open-weight models (GLM 5.3 Flash and DeepSeek V4.1 Flash) run the
+full matrix below. GPT-6 Astra is a reduced proprietary ceiling: Repair
+`N=10` RAG and Non-RAG (10 reps), `N=10` RAG ablation on both corpora
+(10 reps), and Federation `N=10` guided RAG (10 reps). Its existing Repair
+`N=5` RAG five-seed characterization and `N=1` Non-RAG capability probe are
+retained separately and are not relabelled as new campaign rows.
 
-- **8.1** Guided headline arms at `N=10`, both corpora and conditions, all three models, 20 repetitions.
+Run the open-weight lane in this order:
+
+- **8.1** Guided headline arms at `N=10`, both corpora and conditions, both open-weight models, 20 repetitions.
 - **8.2** Guided `N=1` baselines, both corpora and conditions, 20 repetitions.
 - **8.3** Guided curves: Repair `N={5,20,54}` and Federation `N={5,23}`, both conditions, five repetitions.
 - **8.4** Metamodel ablation: RAG only, `N={1,10}`, both corpora, 20 repetitions.
 - **8.5** Repair order sensitivity: RAG, `N={10,54}`, two alternate orderings, five reps.
 - **8.6** Repair retrieval-depth sweep: RAG, `N=10`, `k_doc={3,5,10,15}`, three reps, subject to the Phase 4 ceiling.
+
+The open-weight lane contains 644 runs / 6,300 calls. The new Astra lane
+contains 50 runs / 500 calls. They may run concurrently because they use
+different providers; GLM and DeepSeek remain sequential within the shared
+Ollama lane. The combined new denominator is 694 runs / 6,800 calls.
 
 Validate and back up outputs after each block. Do not calculate outcome scores while generation runs; operational monitoring may use completion, failure, tokens, latency, and cost only.
 
@@ -351,9 +367,9 @@ Global rules that apply across all streams:
 
 ## Phase 10 — Human calibration and final release
 
-- **10.1** Freeze rating sample and rubric before ratings begin.
-- **10.2** Use two raters and report quadratic weighted Cohen's κ.
-- **10.3** Compare expert and Top-FM ordering with rank correlation; report divergence as evidence about α/β, not as a defect.
+- **10.1** Use the versioned [expert-evaluation strategy](docs/expert-evaluation-strategy.md) and freeze its rubric, sample rule, and blinded code key before expert ratings. The added Astra `N=1` RAG outputs are a labelled expert-study extension, not part of the original campaign matrix.
+- **10.2** Seek three independent domain-qualified raters. Report agreement for the four ordinal quality criteria and the blinded triplet preferences, plus the two within-rater repeats descriptively.
+- **10.3** Compare independent expert quality judgments and matched three-model first-draft preferences with the automatic criteria after the ratings are locked. Do not describe this sample as a Top-FM-versus-median experiment or infer model-weight causality from provider-specific settings.
 - **10.4** Produce criterion-divergence and hypothesis-decision tables, including null and non-significant results after correction.
 - **10.5** Record corpus, context-window, reconstructed-attribution, model-version, and campaign-deviation limitations.
 - **10.6** Final hygiene: no old 2×2 output, obsolete entry point, invalid index, pilot, secret, or cache in the release.
@@ -384,3 +400,385 @@ Global rules that apply across all streams:
 | 8 | Immutable measured runs | Every planned run accounted for |
 | 9 | D13–D19 via parallel streams 9A/9B/9C/9D | Tables reproducible; run outputs untouched |
 | 10 | Human calibration and release | Hygiene and reproducibility pass |
+
+---
+
+## Runnable commands (terminal cheat sheet)
+
+Every command assumes:
+
+```bash
+cd /Users/joshuaocansey/dev/feature-model-automation
+source $HOME/.venvs/fame/bin/activate
+```
+
+All scripts read paths and settings from `config/experiment.yaml`. Any change
+to a hashed artefact (prompts, metamodel, chunks, encoders) invalidates the
+frozen protocol — regenerate `data/frozen/protocol.sha256` afterwards.
+
+### Phase 3 — Build and freeze research inputs
+
+D1/D3 already committed. To (re)generate D4, D21, D22, ρ from the current
+manifests + ground-truth XMLs + attribution seed:
+
+```bash
+python scripts/phase3_build_inputs.py    # if not already committed
+# OR the individual helpers if kept separately.
+```
+
+**Verify integrity:**
+
+```bash
+python -c "
+import json
+r = json.load(open('data/calibration/rho.json'))
+for c in ('federation','repair'):
+    print(c, r[c])
+"
+```
+
+Expected: federation `ρ ≈ 0.28`, repair `ρ ≈ 0.58`.
+
+### Phase 4a — Build canonical chunk store (D11)
+
+Runs `unstructured` on every PDF in `data/raw/{corpus}/` and writes the frozen
+`chunks.jsonl` per corpus.
+
+```bash
+# Both corpora
+python scripts/build_chunks.py
+
+# One corpus only
+python scripts/build_chunks.py --corpus federation
+python scripts/build_chunks.py --corpus repair --limit 3   # debug: first 3 docs
+```
+
+**What to watch:**
+
+* Per-PDF one line: `[fed_XX] N elems | XXk chars kept | K chunks | Ts`
+* Final stats table + writes `data/processed/chunks_stats.json`
+* Federation should produce ~23 docs / ~1,000 chunks; Repair ~54 / ~2,700
+
+**Verify:**
+
+```bash
+wc -l data/processed/*/chunks.jsonl
+cat data/processed/chunks_stats.json | python -m json.tool | head -20
+```
+
+### Phase 4b — Build Chroma index + retrieval validity check
+
+Prerequisite: Ollama running with `nomic-embed-text` pulled locally.
+
+```bash
+# Index both corpora into data/chroma/{federation,repair}/
+python scripts/build_index.py
+
+# One corpus only
+python scripts/build_index.py --corpus federation
+```
+
+Expected wall time: ~2 min federation, ~6 min repair. Each chunk is embedded
+serially via Ollama's `/api/embeddings`. Zero failures expected.
+
+**Retrieval validity (4.V smoke, no LLM required):**
+
+```bash
+python scripts/validate_retrieval.py
+# writes results/smoke/retrieval_validity.md
+```
+
+Inspect the top-10 chunks per preselected doc: they should be methodology,
+not references / related work.
+
+### Phase 5 — Unit tests (all engine behaviour)
+
+```bash
+python -m pytest tests/ -q
+```
+
+Expected: **80 pass, 1 skipped, 0 failed**.
+
+### Phase 6 — Smoke run + validator
+
+Full end-to-end with FakeLLM (deterministic, no network cost):
+
+```bash
+python scripts/smoke_run.py \
+  --campaign-id smoke-$(date +%Y-%m-%d) \
+  --corpus federation --N 1 --grounding nonrag \
+  --provider fake \
+  --validate --force
+```
+
+**Live LLM smoke (uses Ollama Pro credits):**
+
+```bash
+python scripts/smoke_run.py \
+  --campaign-id smoke-minimax-m3 \
+  --corpus repair --N 3 --grounding rag \
+  --provider ollama_cloud --model minimax-m3:cloud \
+  --host https://ollama.com \
+  --max-output-tokens 32768 \
+  --validate --force
+```
+
+**GPT-OSS 120B candidate pilot (not included in the campaign matrix):**
+
+```bash
+.venv/bin/python scripts/smoke_run.py \
+  --campaign-id pilot-2026-09-22-gpt-oss-120b-n5 \
+  --corpus repair --N 5 --grounding rag \
+  --provider ollama_cloud --model gpt-oss:120b-cloud \
+  --host https://ollama.com \
+  --max-output-tokens 32768 \
+  --validate --force
+```
+
+**GLM 5.3 Flash candidate retry with the improved prompt:**
+
+```bash
+.venv/bin/python scripts/smoke_run.py \
+  --campaign-id pilot-2026-09-22-glm-5-3-flash-n5-prompt-v2 \
+  --corpus repair --N 5 --grounding rag \
+  --provider ollama_cloud --model glm-5.3-flash:cloud \
+  --host https://ollama.com \
+  --max-output-tokens 32768 \
+  --validate --force
+```
+
+**DeepSeek V4 Pro candidate pilot:**
+
+```bash
+.venv/bin/python scripts/smoke_run.py \
+  --campaign-id pilot-2026-09-22-deepseek-v4-pro-n5 \
+  --corpus repair --N 5 --grounding rag \
+  --provider ollama_cloud --model deepseek-v4-pro:cloud \
+  --host https://ollama.com \
+  --max-output-tokens 32768 \
+  --validate --force
+```
+
+**Validate a specific run directory:**
+
+```bash
+python scripts/validate_run.py \
+  results/smoke-*/federation/*/*/
+```
+
+Exit code 0 = complete + consistent + hashes match. Non-zero = at least one
+ERROR finding.
+
+### Phase 7 — Probe models, build matrix, estimate cost
+
+**7.2 + 7.4 — probe all campaign models:**
+
+```bash
+# Basic reachability + tokenizer alignment (cheap: ~$0.01 total)
+python scripts/probe_models.py --no-burst
+
+# With rate-limit / backoff probe (5 quick-fire calls per model)
+python scripts/probe_models.py --burst 5
+
+# Only one model
+python scripts/probe_models.py --only minimax_m3
+python scripts/probe_models.py --only gpt_oss_120b
+python scripts/probe_models.py --only glm_5_3_flash
+python scripts/probe_models.py --only deepseek_v4_pro
+```
+
+Report saved to `results/pilot-<date>/model_probe.json`. Exits non-zero if
+any configured model is unreachable.
+
+**7.5 — build the run manifest:**
+
+```bash
+# Combined frozen manifest
+./.venv/bin/python scripts/build_run_matrix.py --only-enabled --lane all
+
+# Disjoint provider-lane manifests
+./.venv/bin/python scripts/build_run_matrix.py --only-enabled --lane open_weight
+./.venv/bin/python scripts/build_run_matrix.py --only-enabled --lane astra
+
+# Preview without writing to disk
+./.venv/bin/python scripts/build_run_matrix.py --only-enabled --lane all --dry-run
+```
+
+The accepted totals are 694/6,800 combined, 644/6,300 open-weight, and
+50/500 Astra. Matrix generation fails when those totals drift.
+
+**7.1 — systems pilot:** completed before freeze. The resulting open-weight
+allowance is 32,768 tokens; do not rerun pilots into the measured directory.
+
+**7.3 — extrapolate cost from pilot data:**
+
+```bash
+python scripts/estimate_cost.py \
+  --matrix results/ifs-2027/run_matrix.json \
+  --pilot  results/pilot-2026-09-22/repair/*/*/
+```
+
+Prints per-model + per-arm cost + wall projections.
+
+### Phase 8 — Interactive campaign runner
+
+The main event. Menu-driven, per-step verbose, per-arm validated,
+resume-safe.
+
+**Regenerate and verify the two lane manifests first:**
+
+```bash
+./.venv/bin/python scripts/build_run_matrix.py --only-enabled --lane open_weight
+./.venv/bin/python scripts/build_run_matrix.py --only-enabled --lane astra
+```
+
+**Run these in two terminals for provider-level parallelism:**
+
+```bash
+# Terminal 1: GLM and DeepSeek sequentially through Ollama
+./.venv/bin/python scripts/campaign.py \
+  --matrix results/ifs-2027/run_matrix_enabled_open_weight.json \
+  --lane open_weight
+
+# Terminal 2: Astra through OpenAI
+./.venv/bin/python scripts/campaign.py \
+  --matrix results/ifs-2027/run_matrix_enabled_astra.json \
+  --lane astra
+```
+
+The menu shows each arm with remaining-calls, done/total, est. cost, est.
+wall time. Select `1`–`9` for one arm, `A` for all arms in order, `Q` to
+quit. Every arm asks `Proceed? [y/N]` before firing. Per-step live output.
+
+**Run one arm only (still confirms before spending):**
+
+```bash
+./.venv/bin/python scripts/campaign.py \
+  --matrix results/ifs-2027/run_matrix_enabled_open_weight.json \
+  --lane open_weight \
+  --arm guided_baseline
+```
+
+Open-weight arm names: `guided_baseline`, `guided_headline`, `guided_curve`,
+`ablation`, `order_sensitivity`, `k_doc_sweep_k3`, `k_doc_sweep_k5`,
+`k_doc_sweep_k10`, `k_doc_sweep_k15`. Astra uses `guided_headline`,
+`ablation`, and `astra_cross_corpus`.
+
+**Non-interactive (batch mode; opt-in with `--yes`, use with care):**
+
+```bash
+./.venv/bin/python scripts/campaign.py \
+  --matrix results/ifs-2027/run_matrix_enabled_open_weight.json \
+  --lane open_weight \
+  --run-all --yes
+```
+
+**Skip per-run validator** (validate later with `scripts/validate_run.py`):
+
+```bash
+python scripts/campaign.py --matrix ... --arm ablation --no-validate
+```
+
+**Force overwrite** of existing run outputs (default is resume-skip):
+
+```bash
+python scripts/campaign.py --matrix ... --arm guided_headline --force-runs
+```
+
+**Resume after interruption:** re-run the same command. Every persisted
+terminal outcome—including malformed, truncated, infeasible, and provider
+failure—is retained in the denominator. A process-interrupted, non-terminal
+run requires an explicit `--force-runs` restart. Advisory locks prevent two
+local processes from owning the same row concurrently.
+
+**Watch progress in a second terminal:**
+
+```bash
+watch -n 30 '
+    echo "== runs completed =="; \
+    find results/ifs-2027 -name "fm_gen.xml" | wc -l; \
+    echo "== last run =="; \
+    ls -tr results/ifs-2027/*/*/*/fm_gen.xml 2>/dev/null | tail -1
+'
+```
+
+### Phase 9 — Derived metrics (after Phase 8 completes)
+
+Phase 9 reads from `results/<campaign_id>/**/*` and writes into
+`results/<campaign_id>/analysis/` — the raw run outputs are never mutated.
+Each driver is documented in its own guide; the commands below are the
+end-to-end pipeline.
+
+```bash
+# Phase 1 — inventory
+python scripts/inventory_campaign.py --output results/ifs-2027/analysis/inventory-<date>
+
+# Phase 2 — structural + logical
+python scripts/evaluate_structure.py --inventory results/ifs-2027/analysis/inventory-<date> \
+                                      --output    results/ifs-2027/analysis/structure-<date>
+
+# Phase 3 — semantic (requires D03 encoder identity)
+python scripts/evaluate_semantic.py  --inventory results/ifs-2027/analysis/inventory-<date> \
+                                      --output    results/ifs-2027/analysis/semantic-<date>
+
+# Phase 4 — provenance (L0/L1/L2 + recency)
+python scripts/evaluate_provenance.py --inventory results/ifs-2027/analysis/inventory-<date> \
+                                       --output    results/ifs-2027/analysis/provenance-<date>
+
+# Phase 5 — join + variability + criterion divergence
+python scripts/aggregate_campaign.py --structural results/ifs-2027/analysis/structure-<date> \
+                                      --semantic   results/ifs-2027/analysis/semantic-<date> \
+                                      --provenance results/ifs-2027/analysis/provenance-<date> \
+                                      --output     results/ifs-2027/analysis/campaign-<date>
+
+# Phase 6 — statistical hygiene, τ sweep, plotting
+python scripts/analyse_family.py --wide results/ifs-2027/analysis/campaign-<date>/wide.csv \
+                                  --family config/analysis/families/<name>.json \
+                                  --output results/ifs-2027/analysis/family-<name>-<date>
+python scripts/tau_rescore.py    --pairs results/ifs-2027/analysis/semantic-<date>/pairs.csv \
+                                  --output results/ifs-2027/analysis/tau-sweep-<date>
+python scripts/plot_phase6.py    --campaign results/ifs-2027/analysis/campaign-<date> \
+                                  --output   results/ifs-2027/analysis/plots-<date>
+```
+
+### Common recipes
+
+**Regenerate protocol hashes after changing any frozen artefact:**
+
+```bash
+shasum -a 256 \
+  prompts/fm_prompt_template.txt \
+  prompts/feature-model-schema.xsd \
+  config/experiment.yaml \
+  data/encoder_versions.txt \
+  fame/utils/marker_grammar.py \
+  data/raw/federation/manifest_fed.csv \
+  data/raw/repair/manifest_repair.csv \
+  data/ground_truth/federation.xml \
+  data/ground_truth/repair.xml \
+  data/attribution/federation.csv \
+  data/attribution/repair.csv \
+  data/feature_partition/federation.csv \
+  data/feature_partition/repair.csv \
+  data/orderings.json \
+  data/calibration/rho.json \
+  data/processed/federation/chunks.jsonl \
+  data/processed/repair/chunks.jsonl \
+  data/processed/chunks_stats.json \
+  > data/frozen/protocol.sha256
+```
+
+**Show what the full test suite currently covers:**
+
+```bash
+python -m pytest tests/ --collect-only -q
+```
+
+**Kill a stuck run cleanly:**
+
+```bash
+pkill -f "smoke_run.py\|campaign.py"
+```
+
+Any run that was mid-step will be resume-skipped on next attempt because
+`fm_gen.xml` won't exist for it — the resume guard only skips complete runs.

@@ -102,18 +102,54 @@ Fidelity
 Structure
   - Reflect the organisation the text presents. Introduce an intermediate grouping
     where the text groups concepts, and not otherwise.
-  - Mark a feature abstract="true" when it exists only to group its children.
+  - When the evidence supports subtype, component, phase, mechanism or specialization
+    relationships, represent them as multiple hierarchy levels. Do not place every
+    extracted concept directly under the root or a broad top-level category when the
+    evidence supports a more specific parent.
+  - A <feature> element is always a leaf and MUST NOT contain child nodes. Any node
+    with children MUST be represented by <and>, <or> or <alt>.
+  - Every <and>, <or> or <alt> node MUST contain at least one named child node. Never
+    convert a <feature> into <and>, <or> or <alt> unless at least one
+    evidence-supported child is placed inside it in the same response. If no supported
+    child is available, keep the concept as a leaf <feature>.
+  - When the evidence makes an existing leaf concept the parent of more specific
+    concepts, replace its <feature> element with an <and>, <or> or <alt> element.
+    Preserve its name, attributes and description, then nest the supported children
+    inside it. The parent may remain concrete with abstract="false".
+  - Use <and> for a parent whose children are independently selectable, or when the
+    evidence supports the parent-child relationship but does not establish <or> or
+    <alt> choice semantics. Use <or> only when one or more children may be selected,
+    and <alt> only when exactly one child may be selected.
+  - Mark a grouping node abstract="true" only when it exists solely to organise its
+    children and does not itself represent a selectable domain concept.
+  - Before returning the XML, verify both directions: every <feature> has no children,
+    and every <and>, <or> and <alt> has at least one child.
+  - Do not introduce unsupported grouping nodes. Do not invent hierarchy merely to
+    increase depth.
 
 Variability
   - Mark mandatory="true" when the evidence indicates the feature holds whenever its
     parent does. Omit mandatory when the evidence presents it as one possibility among
     others. Where the evidence does not settle it, choose the reading the text better
     supports rather than defaulting in either direction.
-  - <and> for co-existing decomposition, <or> for one-or-more, <alt> for exactly-one.
-    Use <alt> only where the alternatives are mutually exclusive in the evidence.
+  - Choose the group kind from the evidence: <and> where the children co-exist,
+    <or> where the evidence presents them as choices of which at least one applies,
+    <alt> where they are mutually exclusive.
   - Do not mix group kinds within one group.
 
-Naming
+Concept selection and naming
+  - A generic statement that two or more concepts are related, associated or connected
+    is not evidence for a new feature. Do not turn relation wording into compound
+    feature names.
+  - Do not enumerate combinations or permutations of the same concepts. In particular,
+    do not create both A_B and B_A, or longer reorderings, merely because the concepts
+    occur together.
+  - Do not append numeric suffixes such as _2 or _23 to distinguish near-duplicate
+    features. A suffix does not make an otherwise duplicated concept distinct.
+  - Before adding a feature, compare its meaning with every feature already in the
+    model. If the concept is already represented, reuse that feature and update its
+    trace only when the evidence supports doing so. Otherwise ignore the repeated or
+    merely relational statement instead of creating another feature.
   - Deduplicate synonyms; keep one expressive name per concept.
   - Distinct concepts must not share a name, even under different parents.
 
@@ -123,31 +159,30 @@ PROVENANCE:
 Every feature carries exactly one <description> element of at least one full sentence,
 grounded in the evidence.
 
-Every description, without exception, ends with a source marker in exactly this form,
-as the final characters of the description:
+Every description, without exception, ends with a trace in exactly this form, as the
+final characters of the description:
 
-  [src: id1, id2]
+  Trace: [id1, id2]
 
-Rules for the marker:
-  - The marker is a single bracketed token, opened by "[src: " and closed by "]".
+Rules for the trace:
   - Use ONLY document identifiers listed under DOCUMENT IDS IN THIS CONTEXT below.
   - Identifiers exactly as given. Do not abbreviate, reformat or invent them.
   - Separate multiple identifiers with a comma and a space.
   - At least one identifier. No section numbers, headings, titles or page numbers.
   - Nothing after the closing bracket.
 
-Abstract features carry a marker as well. An abstract feature exists to group its
-children, so its marker lists the identifiers supporting the features grouped beneath
+Abstract features carry a trace as well. An abstract feature exists to group its
+children, so its trace lists the identifiers supporting the features grouped beneath
 it. Do not cite a document for an abstract feature unless that document supports at
 least one feature below it.
 
 Form of a description:
   <description>One sentence stating what the feature is, in the terms the evidence
-  uses. [src: ID_A, ID_B]</description>
+  uses. Trace: [ID_A, ID_B]</description>
 
 {% if previous_model %}
-Markers already present in the PREVIOUS FEATURE MODEL are kept unchanged, even when
-they name documents absent from this context. Add an identifier to an existing marker
+Traces already present in the PREVIOUS FEATURE MODEL are kept unchanged, even when
+they name documents absent from this context. Add an identifier to an existing trace
 only when this context provides further evidence for that same feature.
 {% endif %}
 

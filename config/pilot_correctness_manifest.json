@@ -1,0 +1,32 @@
+{
+  "analysis_id": "pilot-correctness-2026-09-23",
+  "ground_truth": "data/ground_truth/repair.xml",
+  "xsd": "prompts/feature-model-schema.xsd",
+  "encoder_model": "sentence-transformers/all-mpnet-base-v2",
+  "tau_primary": 0.4,
+  "tau_sweep": [0.3, 0.4, 0.5, 0.6],
+  "sources": [
+    {"path": "results/pilot-2026-09-22-selection-final-seeds", "cohort": "n5_rag", "primary": true},
+    {"path": "results/pilot-2026-09-23-gpt-6-astra-medium-n5-final-seeds", "cohort": "n5_rag", "primary": true},
+    {"path": "results/pilot-2026-09-22-deepseek-v4-1-flash-n5-schema-depth-v2", "cohort": "n5_rag", "primary": true},
+    {"path": "results/pilot-2026-09-22-glm-5-3-flash-n5-schema-depth-v2", "cohort": "n5_rag", "primary": true},
+    {"path": "results/pilot-2026-09-22-minimax-m3-n5-schema-depth-v2", "cohort": "n5_rag", "primary": true},
+    {"path": "results/pilot-2026-09-22-gpt-oss-120b-n5-schema-depth", "cohort": "n5_rag", "primary": true},
+    {"path": "results/pilot-2026-09-23-n1-nonrag-capability-seed0", "cohort": "n1_nonrag_capability", "primary": true},
+    {"path": "results/pilot-2026-09-22-deepseek-v4-1-flash-n5-schema-depth-v2-repeat", "cohort": "n5_rag_supplementary", "primary": false}
+  ],
+  "expected_primary": {
+    "n5_rag": {
+      "N": 5,
+      "grounding": "rag",
+      "models": ["deepseek-v4.1-flash:cloud", "deepseek-v4-pro:cloud", "glm-5.3-flash:cloud", "gpt-oss:120b-cloud", "minimax-m3:cloud", "gpt-6-astra"],
+      "seeds": [0, 1, 2, 3, 4]
+    },
+    "n1_nonrag_capability": {
+      "N": 1,
+      "grounding": "nonrag",
+      "models": ["deepseek-v4.1-flash:cloud", "deepseek-v4-pro:cloud", "glm-5.3-flash:cloud", "gpt-oss:120b-cloud", "minimax-m3:cloud", "gpt-6-astra"],
+      "seeds": [0]
+    }
+  }
+}

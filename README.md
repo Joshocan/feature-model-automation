@@ -1,7 +1,17 @@
 # Feature Model Automation
 
+Evaluation implementation: [specification v0.1.0](docs/evaluation-spec.md),
+[metric dictionary](docs/metric-dictionary.md), and
+[open decisions](docs/evaluation-decisions.md). This post-generation draft is not
+yet frozen; it does not change the campaign protocol or enable generation calls.
+The [run inventory guide](docs/run-inventory.md) documents the read-only artifact audit.
+The [structural evaluation guide](docs/structural-evaluation.md) describes
+offline XML, schema, hierarchy, variability and SAT diagnostics and their limitations.
+For the current manual, offline evaluation sequence and denominator checks, see the
+[evaluation runbook](docs/evaluation-runbook.md). No campaign evaluation runs automatically.
+
 > **⚠️ SUPERSEDED — this README describes the retired 2×2 pipeline design.**
-> The active plan is [IFS_2027_EXPERIMENT.md](IFS_2027_EXPERIMENT.md), which replaces the four SS/IS×RAG/Non-RAG pipelines with a single N-granularity engine. A full rewrite of this README lands in Phase 5 (unified engine). The text below is kept only for orientation while the migration is in flight.
+> The active plan is [IFS_2027_EXPERIMENT.md](IFS_2027_EXPERIMENT.md), which replaces the four SS/IS×RAG/Non-RAG pipelines with a single N-granularity engine. A full rewrite of this README is pending. The text below is kept only for orientation while the migration is in flight.
 
 ---
 

@@ -1,8 +1,8 @@
 # config/experiment.yaml
-# Frozen Phase-2 protocol for the iFS 2027 campaign.
+# Frozen protocol for the iFS 2027 campaign.
 #
 # This file supersedes config/fame.yaml for anything the new N-granularity
-# campaign runs on. fame.yaml stays only until Phase 5 finishes decommissioning
+# campaign runs on. fame.yaml stays only until the unified engine finishes decommissioning
 # the legacy 4-pipeline entry points.
 #
 # Any change to a value below changes the campaign identity. The config loader
@@ -14,8 +14,21 @@
 # ─────────────────────────────────────────────────────────────────────────────
 campaign:
   id: "ifs-2027"
-  frozen_on: "2026-09-20"
+  frozen_on: "2026-09-23"
   brief: "data/ground_truth/implementation-brief.md"
+  expected_enabled_matrix:
+    total_runs: 694
+    total_calls: 6800
+    lanes:
+      open_weight: {runs: 644, calls: 6300}
+      astra: {runs: 50, calls: 500}
+
+execution:
+  # Run the two provider lanes in parallel, but keep models within the shared
+  # Ollama account sequential until an explicit rate-limit study says otherwise.
+  provider_concurrency:
+    ollama_cloud: 1
+    openai: 1
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Corpora (D2)
@@ -65,7 +78,7 @@ retrieval:
     - "search_query: how the approach works, its mechanism, algorithm or procedure"
     - "search_query: the options, modes, variants and alternatives the approach supports"
     - "search_query: what the approach requires, assumes, or guarantees"
-  # k_doc frozen in Phase 4.9 based on measured chunks-per-document.
+  # k_doc frozen based on measured chunks-per-document.
   # Federation min = 17. Repair min = 5 (rep_15, an 11-page LNCS 2003 paper
   # whose extractable text is ~5.4k chars — all four extractors agree).
   # Values k_doc >= 5 on rep_15 at N=54 yield RAG == Non-RAG for that single
@@ -80,35 +93,132 @@ retrieval:
 # Generation models (2.3 — frozen)
 # ─────────────────────────────────────────────────────────────────────────────
 generation_models:
-  glm_5_3_flash:
+  minimax_m3:
     provider: "ollama_cloud"
-    model_id: "glm-5.3-flash"
-    context_window_tokens: 1000000
-    max_output_tokens: 16384
-    reasoning_effort: "medium"     # open-weight fixed setting; recorded per-run in D10
+    model_id: "minimax-m3:cloud"         # :cloud suffix routes to Ollama cloud, no local pull
+    context_window_tokens: 512000         # hosted tag's guaranteed context window
+    max_output_tokens: 32768
+    reasoning_effort: "low"     # pilot-only configuration; model is excluded from the campaign
     temperature: 0.2
     serving_endpoint: "https://ollama.com"
-    aa_index: 42
-    role: "open_weight"
+    aa_index: null               # record the applicable snapshot rank before campaign freeze
+    role: "open_weight_pilot_candidate"
+    lane: "excluded"
+    enabled: false
+    participation:                  # per-arm N values it participates in
+      baseline_N:            []
+      headline_N:            []
+      repair_curve_N:        []
+      federation_curve_N:    []
+      ablation_N:            []
+      order_sensitivity_N:   []
+      k_doc_sweep_N:         []
   deepseek_v4_1_flash:
     provider: "ollama_cloud"
-    model_id: "deepseek-v4.1-flash"
+    model_id: "deepseek-v4.1-flash:cloud"
     context_window_tokens: 1000000
-    max_output_tokens: 16384
-    reasoning_effort: "medium"
+    max_output_tokens: 32768
+    reasoning_effort: "low"     # open-weight: same as MiniMax — no silent thinking
     temperature: 0.2
     serving_endpoint: "https://ollama.com"
     aa_index: 40
     role: "open_weight"
+    lane: "open_weight"
+    enabled: true
+    participation:
+      baseline_N:            [1]
+      headline_N:            [10]
+      repair_curve_N:        [5, 20, 54]
+      federation_curve_N:    [5, 23]
+      ablation_N:            [1, 10]
+      order_sensitivity_N:   [10, 54]
+      k_doc_sweep_N:         [10]
+  gpt_oss_120b:
+    provider: "ollama_cloud"
+    model_id: "gpt-oss:120b-cloud"
+    context_window_tokens: 128000
+    max_output_tokens: 16384
+    reasoning_effort: "low"     # level-based reasoning; sent to Ollama as think="low"
+    temperature: 0.2
+    serving_endpoint: "https://ollama.com"
+    aa_index: null
+    role: "open_weight_pilot_candidate"
+    lane: "excluded"
+    enabled: false               # smoke/probe explicitly; exclude from campaign until accepted
+    participation:
+      baseline_N:            []
+      headline_N:            []
+      repair_curve_N:        []
+      federation_curve_N:    []
+      ablation_N:            []
+      order_sensitivity_N:   []
+      k_doc_sweep_N:         []
+  glm_5_3_flash:
+    provider: "ollama_cloud"
+    model_id: "glm-5.3-flash:cloud"
+    context_window_tokens: 1000000
+    max_output_tokens: 32768
+    reasoning_effort: "low"     # level-based reasoning; sent to Ollama as think="low"
+    temperature: 0.2
+    serving_endpoint: "https://ollama.com"
+    aa_index: null
+    role: "open_weight"
+    lane: "open_weight"
+    enabled: true
+    participation:
+      baseline_N:            [1]
+      headline_N:            [10]
+      repair_curve_N:        [5, 20, 54]
+      federation_curve_N:    [5, 23]
+      ablation_N:            [1, 10]
+      order_sensitivity_N:   [10, 54]
+      k_doc_sweep_N:         [10]
+  deepseek_v4_pro:
+    provider: "ollama_cloud"
+    model_id: "deepseek-v4-pro:cloud"
+    context_window_tokens: 1000000
+    max_output_tokens: 16384
+    reasoning_effort: "low"     # campaign low policy maps to Ollama think=false
+    temperature: 0.2
+    serving_endpoint: "https://ollama.com"
+    aa_index: null
+    role: "open_weight_pilot_candidate"
+    lane: "excluded"
+    enabled: false               # smoke/probe explicitly; exclude from campaign until accepted
+    participation:
+      baseline_N:            []
+      headline_N:            []
+      repair_curve_N:        []
+      federation_curve_N:    []
+      ablation_N:            []
+      order_sensitivity_N:   []
+      k_doc_sweep_N:         []
   gpt_6_astra:
     provider: "openai"
     model_id: "gpt-6-astra"
-    context_window_tokens: 1000000
+    context_window_tokens: 1050000       # verified against official model documentation
     max_output_tokens: 32768
-    reasoning_effort: "high"
-    temperature: 0.2
+    reasoning_effort: "medium"
+    temperature: 1.0                     # model supports only its fixed default temperature
     aa_index: 51
     role: "proprietary_ceiling"
+    lane: "astra"
+    enabled: true
+    # Reduced proprietary-ceiling campaign: 50 new runs / 500 calls. Existing
+    # N=5 RAG and N=1 Non-RAG pilots remain characterization evidence and are
+    # not silently imported as new campaign repetitions.
+    participation:
+      custom_cells:
+        - {arm: guided_headline, corpus: repair, N: 10, grounding: rag,
+           repetitions: 10, metamodel_block: true}
+        - {arm: guided_headline, corpus: repair, N: 10, grounding: nonrag,
+           repetitions: 10, metamodel_block: true}
+        - {arm: ablation, corpus: repair, N: 10, grounding: rag,
+           repetitions: 10, metamodel_block: false}
+        - {arm: ablation, corpus: federation, N: 10, grounding: rag,
+           repetitions: 10, metamodel_block: false}
+        - {arm: astra_cross_corpus, corpus: federation, N: 10, grounding: rag,
+           repetitions: 10, metamodel_block: true}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Prompt assembly + provenance marker (2.2)
@@ -120,8 +230,8 @@ prompt:
   # variable blocks last (context, previous model). Enables prefix caching.
   block_order: ["system", "metamodel", "output_contract", "guidance", "provenance", "previous_model", "context"]
   # Provenance marker grammar. Frozen. Never changes during the campaign.
-  marker_regex: "\\[src:\\s+([A-Za-z0-9_,\\s]+?)\\]\\s*\\Z"
-  marker_example: "[src: rep_01, rep_17]"
+  marker_regex: "Trace:\\s*\\[\\s*([A-Za-z0-9_,\\s]+?)\\s*\\]\\s*\\Z"
+  marker_example: "Trace: [rep_01, rep_17]"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Instrument — semantic (D15)
@@ -191,9 +301,9 @@ frozen_artefacts:
     - "prompts/fm_prompt_template.txt"
     - "prompts/feature-model-schema.xsd"
     - "config/experiment.yaml"
-    # D22 orderings.json — added in Phase 3.7
-    # D4 attribution.csv per corpus — added in Phase 3.5
-    # D21 feature_partition.csv per corpus — added in Phase 3.6
+    # D22 orderings.json
+    # D4 attribution.csv per corpus
+    # D21 feature_partition.csv per corpus
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Open decisions (non-blocking; do not block campaign start)

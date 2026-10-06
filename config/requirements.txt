@@ -5,9 +5,14 @@ xmlschema
 graphviz
 pillow
 python-docx
+openpyxl>=3.1,<4
 pypdf
 pytest
 requests
+PyYAML
+Jinja2
+six
+tiktoken
 fastapi>=0.110,<0.116
 starlette>=0.36,<0.47
 pydantic>=2.6,<2.11
@@ -15,7 +20,10 @@ uvicorn>=0.23,<0.31
 # python-docx
 
 # Evaluation / embeddings
+scipy>=1.9,<2
 sentence-transformers>=2.6.0
+python-sat==1.9.dev15
+matplotlib>=3.8,<4
 
 # Chroma + LangChain
 chromadb
