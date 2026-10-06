@@ -1,8 +1,8 @@
-"""Sliding-window chunker for the iFS 2027 campaign (Phase 4.3, 4.4).
+"""Sliding-window chunker for the iFS 2027 campaign.
 
 Semantics
 ---------
-* Fixed target size: ``max_chunk_chars`` (frozen to 1500 in Phase 2.1).
+* Fixed target size: ``max_chunk_chars`` (frozen to 1500 in the protocol).
 * Fixed overlap:     ``overlap_chars``   (15% of max = 225 chars).
 * Boundary preference (within the last 50% of the window):
     1. paragraph break  ``\\n\\n``

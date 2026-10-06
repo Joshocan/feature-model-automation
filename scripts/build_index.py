@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Phase 4.6 — build Chroma index per corpus from chunks.jsonl.
+"""build Chroma index per corpus from chunks.jsonl.
 
 Reads ``config/experiment.yaml`` to locate chunks and the Chroma root.
 The collection is fully reset on each run for reproducibility.

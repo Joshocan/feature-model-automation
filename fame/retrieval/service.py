@@ -1,4 +1,4 @@
-"""RetrievalService — batched, 4-sub-query, doc_id-filtered retrieval (Phase 4.7).
+"""RetrievalService — batched, 4-sub-query, doc_id-filtered retrieval.
 
 At step j with batch ``B_j = {doc_id_1, doc_id_2, ...}`` the service executes
 each of the four fixed sub-queries against the corpus's Chroma collection with

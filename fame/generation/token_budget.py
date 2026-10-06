@@ -1,4 +1,4 @@
-"""Pre-flight token counting + infeasibility guard (Phase 5.6).
+"""Pre-flight token counting + infeasibility guard.
 
 Every step, we compute the assembled prompt's token count using a per-model
 tokenizer. If the count exceeds the model's context window, we do **not** call

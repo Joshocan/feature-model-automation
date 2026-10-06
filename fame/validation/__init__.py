@@ -1,4 +1,4 @@
-"""Run validators — Phase 6 logging contract enforcement."""
+"""Run validators — logging contract enforcement."""
 from .run_validator import (
     Finding,
     Severity,

@@ -1,4 +1,4 @@
-"""Prompt assembly with invariant-first block ordering (Phase 5.5, 5.7).
+"""Prompt assembly with invariant-first block ordering.
 
 Renders the frozen Jinja template ``prompts/fm_prompt_template.txt`` with two
 switches:

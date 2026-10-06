@@ -137,18 +137,18 @@ def summarise_reports(corpus: str, reports: List[DocReport]) -> Dict[str, object
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Backwards-compat shims for the older four-pipeline entry points.
-# These are kept only until Phase 5 removes their callers.
+# These are kept only until the unified engine fully supersedes their callers.
 # ─────────────────────────────────────────────────────────────────────────────
 
 def ingest_one_file(*args, **kwargs):  # pragma: no cover
     raise NotImplementedError(
-        "The legacy ingest_one_file(...) path was removed in Phase 4. "
+        "The legacy ingest_one_file(...) path was removed with the unified ingestion rewrite. "
         "Use build_corpus_chunks(...) instead."
     )
 
 
 def ingest_and_prepare(*args, **kwargs):  # pragma: no cover
     raise NotImplementedError(
-        "The legacy ingest_and_prepare(...) path was removed in Phase 4. "
+        "The legacy ingest_and_prepare(...) path was removed with the unified ingestion rewrite. "
         "Use build_corpus_chunks(...) instead."
     )

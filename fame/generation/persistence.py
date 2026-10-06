@@ -1,4 +1,4 @@
-"""Atomic write helpers for run artefacts (Phase 5.8, 5.T8).
+"""Atomic write helpers for run artefacts.
 
 Every write is: write to sibling ``.tmp`` file → ``fsync`` → atomic ``rename``
 so an interrupted run leaves either the previous complete state or no file at

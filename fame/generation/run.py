@@ -1,4 +1,4 @@
-"""Run configuration + deterministic run_id derivation (Phase 5, 5.T8)."""
+"""Run configuration + deterministic run_id derivation."""
 from __future__ import annotations
 
 import hashlib
@@ -12,7 +12,7 @@ class RunConfig:
     """All parameters that identify a single run.
 
     ``run_id`` is a SHA-256 of the config JSON. Changing any field yields a
-    different run_id, hence a different results directory (Phase 5.T8: resume
+    different run_id, hence a different results directory (resume
     never overwrites a differently-configured run).
     """
     campaign_id: str

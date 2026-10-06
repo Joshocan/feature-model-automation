@@ -1,4 +1,4 @@
-"""Deterministic batching (Phase 5.1).
+"""Deterministic batching.
 
 Split a frozen ordering π into exactly N non-empty contiguous slices.
 

@@ -46,8 +46,8 @@ services:
     temperature: 0.2
     max_tokens: 16000
     # Per-model max_tokens for judge/evaluator LLMs. Retired-model entries
-    # were removed in Phase 1 Pass B; refill for the actual judge model
-    # chosen for Phase 8/RQ7.
+    # were removed with the SS/IS pipeline retirement; refill for the actual judge model
+    # chosen for the measured campaign.
     model_max_tokens: {}
     timeout_s: 120
 
@@ -96,7 +96,7 @@ context:
   include_headers: true
 
 # NOTE: The legacy `pipelines:` block (ss_rgfm, is_rgfm, ss_nonrag, is_nonrag,
-# is_core_structure) was removed in Phase 1 Pass B alongside fame/rag/ and
+# is_core_structure) was removed with the SS/IS pipeline retirement alongside fame/rag/ and
 # fame/nonrag/. The unified N-step generation loop is configured entirely from
 # config/experiment.yaml. This file is retained only for legacy tooling
 # (chroma/ollama services, evaluation defaults) still consumed by helper

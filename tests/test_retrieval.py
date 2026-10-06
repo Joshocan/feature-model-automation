@@ -1,4 +1,4 @@
-"""Tests for the Phase 4b retrieval primitives.
+"""Tests for the retrieval primitives.
 
 Covers:
 - Loading and validating the 4 fixed sub-queries from experiment.yaml
@@ -7,7 +7,7 @@ Covers:
 - The k_step splitting policy across 4 sub-queries (remainder-spread-first)
 
 These tests do not touch Chroma or Ollama. An integration test that hits a
-live index lives elsewhere (added in Phase 5).
+live index lives elsewhere.
 """
 from __future__ import annotations
 

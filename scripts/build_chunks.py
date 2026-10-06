@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Phase 4a — build canonical chunks.jsonl per corpus.
+"""Build canonical chunks.jsonl per corpus.
 
 Reads chunking policy from ``config/experiment.yaml`` and emits:
   data/processed/federation/chunks.jsonl

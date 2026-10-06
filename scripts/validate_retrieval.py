@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Phase 4.V — retrieval validity smoke check.
+"""retrieval validity smoke check.
 
 For each preselected doc_id, run the 4 fixed sub-queries with the doc_id
 filter set to that single doc. Print the top-10 chunks. This is qualitative:
 methodology / approach chunks are the target; related-work, background, or
 reference-list chunks indicate a preprocessing regression.
 
-Preselected docs are frozen: **fed_05, rep_25, rep_50** (Phase 4.V decision).
+Preselected docs are frozen: **fed_05, rep_25, rep_50** (retrieval validity decision).
 
 Usage:
   python scripts/validate_retrieval.py
@@ -51,7 +51,7 @@ def main() -> int:
     domains = {"federation": args.domain_federation, "repair": args.domain_repair}
     services: dict[str, RetrievalService] = {}
     lines: list[str] = []
-    lines.append(f"# Retrieval validity smoke — Phase 4.V\n")
+    lines.append(f"# Retrieval validity smoke — retrieval validity\n")
     lines.append(f"Preselected doc_ids: {', '.join(d for _, d in SMOKE_DOCS)}\n")
     lines.append(f"k_step: {args.top_k}\n")
 

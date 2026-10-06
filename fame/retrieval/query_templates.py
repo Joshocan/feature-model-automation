@@ -1,4 +1,4 @@
-"""Fixed retrieval sub-queries (frozen in Phase 2.9).
+"""Fixed retrieval sub-queries (frozen in the protocol).
 
 Four sub-queries, identical at every step, in both RAG arms, independent of
 generation state. **Never query with the current feature model** — that

@@ -1,4 +1,4 @@
-"""Tests for the deterministic chunker (Phase 4 core)."""
+"""Tests for the deterministic chunker."""
 from __future__ import annotations
 
 import pytest
