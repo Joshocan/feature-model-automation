@@ -1,0 +1,1212 @@
+{
+  "family": "C_ablation_strict",
+  "timing": "post_generation_post_descriptive_analysis",
+  "preregistered": false,
+  "tau_primary": 0.4,
+  "min_n": 5,
+  "alpha": 0.05,
+  "semantic_population": "strict_admissible_final",
+  "purpose": "labelled sensitivity, not alternative significance opportunity",
+  "comparisons": [
+    {
+      "name": "deepseek-v4.1-flash:cloud_repair_N1__semantic__semantic_precision",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_precision"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_repair_N1__semantic__recall_reach",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__recall_reach"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_repair_N1__semantic__semantic_f1_total",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_f1_total"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_repair_N1__semantic__parent_match_rate",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__parent_match_rate"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_repair_N1__structural__structural_conformance",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "structural__structural_conformance"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_repair_N10__semantic__semantic_precision",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_precision"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_repair_N10__semantic__recall_reach",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__recall_reach"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_repair_N10__semantic__semantic_f1_total",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_f1_total"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_repair_N10__semantic__parent_match_rate",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__parent_match_rate"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_repair_N10__structural__structural_conformance",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "structural__structural_conformance"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_federation_N1__semantic__semantic_precision",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_precision"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_federation_N1__semantic__recall_reach",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__recall_reach"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_federation_N1__semantic__semantic_f1_total",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_f1_total"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_federation_N1__semantic__parent_match_rate",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__parent_match_rate"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_federation_N1__structural__structural_conformance",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "structural__structural_conformance"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_federation_N10__semantic__semantic_precision",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_precision"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_federation_N10__semantic__recall_reach",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__recall_reach"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_federation_N10__semantic__semantic_f1_total",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_f1_total"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_federation_N10__semantic__parent_match_rate",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__parent_match_rate"
+    },
+    {
+      "name": "deepseek-v4.1-flash:cloud_federation_N10__structural__structural_conformance",
+      "arm_a": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "deepseek-v4.1-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "structural__structural_conformance"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_repair_N1__semantic__semantic_precision",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_precision"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_repair_N1__semantic__recall_reach",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__recall_reach"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_repair_N1__semantic__semantic_f1_total",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_f1_total"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_repair_N1__semantic__parent_match_rate",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__parent_match_rate"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_repair_N1__structural__structural_conformance",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "structural__structural_conformance"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_repair_N10__semantic__semantic_precision",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_precision"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_repair_N10__semantic__recall_reach",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__recall_reach"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_repair_N10__semantic__semantic_f1_total",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_f1_total"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_repair_N10__semantic__parent_match_rate",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__parent_match_rate"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_repair_N10__structural__structural_conformance",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "structural__structural_conformance"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_federation_N1__semantic__semantic_precision",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_precision"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_federation_N1__semantic__recall_reach",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__recall_reach"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_federation_N1__semantic__semantic_f1_total",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_f1_total"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_federation_N1__semantic__parent_match_rate",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__parent_match_rate"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_federation_N1__structural__structural_conformance",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "guided_baseline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 1,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "structural__structural_conformance"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_federation_N10__semantic__semantic_precision",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_precision"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_federation_N10__semantic__recall_reach",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__recall_reach"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_federation_N10__semantic__semantic_f1_total",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_f1_total"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_federation_N10__semantic__parent_match_rate",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__parent_match_rate"
+    },
+    {
+      "name": "glm-5.3-flash:cloud_federation_N10__structural__structural_conformance",
+      "arm_a": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "glm-5.3-flash:cloud",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "structural__structural_conformance"
+    },
+    {
+      "name": "gpt-6-astra_repair_N10__semantic__semantic_precision",
+      "arm_a": {
+        "model_id": "gpt-6-astra",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "gpt-6-astra",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_precision"
+    },
+    {
+      "name": "gpt-6-astra_repair_N10__semantic__recall_reach",
+      "arm_a": {
+        "model_id": "gpt-6-astra",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "gpt-6-astra",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__recall_reach"
+    },
+    {
+      "name": "gpt-6-astra_repair_N10__semantic__semantic_f1_total",
+      "arm_a": {
+        "model_id": "gpt-6-astra",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "gpt-6-astra",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_f1_total"
+    },
+    {
+      "name": "gpt-6-astra_repair_N10__semantic__parent_match_rate",
+      "arm_a": {
+        "model_id": "gpt-6-astra",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "gpt-6-astra",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__parent_match_rate"
+    },
+    {
+      "name": "gpt-6-astra_repair_N10__structural__structural_conformance",
+      "arm_a": {
+        "model_id": "gpt-6-astra",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "guided_headline",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "gpt-6-astra",
+        "corpus": "repair",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "structural__structural_conformance"
+    },
+    {
+      "name": "gpt-6-astra_federation_N10__semantic__semantic_precision",
+      "arm_a": {
+        "model_id": "gpt-6-astra",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "astra_cross_corpus",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "gpt-6-astra",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_precision"
+    },
+    {
+      "name": "gpt-6-astra_federation_N10__semantic__recall_reach",
+      "arm_a": {
+        "model_id": "gpt-6-astra",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "astra_cross_corpus",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "gpt-6-astra",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__recall_reach"
+    },
+    {
+      "name": "gpt-6-astra_federation_N10__semantic__semantic_f1_total",
+      "arm_a": {
+        "model_id": "gpt-6-astra",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "astra_cross_corpus",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "gpt-6-astra",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__semantic_f1_total"
+    },
+    {
+      "name": "gpt-6-astra_federation_N10__semantic__parent_match_rate",
+      "arm_a": {
+        "model_id": "gpt-6-astra",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "astra_cross_corpus",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "gpt-6-astra",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "semantic__parent_match_rate"
+    },
+    {
+      "name": "gpt-6-astra_federation_N10__structural__structural_conformance",
+      "arm_a": {
+        "model_id": "gpt-6-astra",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "astra_cross_corpus",
+        "metamodel_block": true,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "arm_b": {
+        "model_id": "gpt-6-astra",
+        "corpus": "federation",
+        "N": 10,
+        "grounding": "rag",
+        "arm": "ablation",
+        "metamodel_block": false,
+        "ordering_id": "primary",
+        "k_doc": 5
+      },
+      "metric": "structural__structural_conformance"
+    }
+  ]
+}
