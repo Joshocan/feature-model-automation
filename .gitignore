@@ -32,6 +32,7 @@ data/processed/
 data/chroma/
 data/chroma_db*
 data/ollama/
+results/
 results/**/images/
 results/**/reports/
 results/non_rag/
