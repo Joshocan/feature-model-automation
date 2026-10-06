@@ -8,7 +8,7 @@ cd "$REPO_ROOT"
 OS_NAME="$(uname -s || true)"
 case "$OS_NAME" in
   Linux*|Darwin*)
-    ./scripts/bootstrap.sh
+    ./scripts/install_requirements.sh
     # Activate venv for the remainder of this script (won't persist after exit)
     if [[ -f "${REPO_ROOT}/.venv/bin/activate" ]]; then
       source "${REPO_ROOT}/.venv/bin/activate"
@@ -27,9 +27,6 @@ case "$OS_NAME" in
         echo "WARN:  Venv activation not detected. Try: source ${REPO_ROOT}/.venv/bin/activate"
       fi
     fi
-
-    # Ensure requirements (idempotent even if bootstrap already ran)
-    ./scripts/install_requirements.sh
 
     # Set sensible defaults for Ollama hosts (embed local, LLM remote)
     export OLLAMA_EMBED_HOST="${OLLAMA_EMBED_HOST:-http://127.0.0.1:11434}"

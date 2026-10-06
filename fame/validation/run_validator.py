@@ -1,4 +1,4 @@
-"""Run-directory validator (Phase 6.6).
+"""Run-directory validator.
 
 Given the root of a completed run, verify every part of the logging contract:
 
@@ -31,6 +31,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from xml.etree import ElementTree as ET
 
+import xmlschema
+
 
 class Severity(str, Enum):
     INFO    = "INFO"
@@ -49,10 +51,29 @@ class Finding:
 class ValidationReport:
     run_root: Path
     run_id: Optional[str] = None
+    declared_complete: bool = False
     findings: List[Finding] = field(default_factory=list)
 
     @property
     def complete(self) -> bool:
+        """Backward-compatible alias for an admissible completed run."""
+        return self.admissible
+
+    @property
+    def execution_complete(self) -> bool:
+        return self.declared_complete
+
+    @property
+    def xsd_valid(self) -> bool:
+        return not any(
+            f.severity == Severity.ERROR and f.check.startswith("xsd:")
+            for f in self.findings
+        )
+
+    @property
+    def admissible(self) -> bool:
+        if not self.declared_complete:
+            return False
         return all(f.severity == Severity.INFO for f in self.findings)
 
     @property
@@ -67,7 +88,9 @@ class ValidationReport:
         return {
             "run_root": str(self.run_root),
             "run_id":   self.run_id,
-            "complete": self.complete,
+            "complete": self.execution_complete,
+            "xsd_valid": self.xsd_valid,
+            "admissible": self.admissible,
             "n_errors": self.n_errors,
             "n_warnings": self.n_warnings,
             "findings": [
@@ -118,18 +141,22 @@ def validate_run(
     ``protocol_sha256`` defaults to ``<repo_root>/data/frozen/protocol.sha256``.
     """
     root = Path(run_root).expanduser().resolve()
+    if repo_root is None:
+        # <repo>/results/<campaign>/<corpus>/<config_hash>/<run_id>/
+        repo_root = root.parents[4] if len(root.parents) >= 5 else root
+    repo_root = Path(repo_root).expanduser().resolve()
     findings: List[Finding] = []
     run_id: Optional[str] = None
 
     def add(check: str, sev: Severity, detail: str) -> None:
         findings.append(Finding(check=check, severity=sev, detail=detail))
 
-    # ── 1. presence
+    # ── 1. common presence. fm_gen.xml is conditional: required only for a
+    # completed run and forbidden for an incomplete one.
     expected = {
         "run_config.json":     root / "run_config.json",
         "run_meta.json":       root / "run_meta.json",
         "context_log.jsonl":   root / "context_log.jsonl",
-        "fm_gen.xml":          root / "fm_gen.xml",
         "fm_iter/":            root / "fm_iter",
     }
     for name, p in expected.items():
@@ -156,23 +183,62 @@ def validate_run(
     except Exception as exc:
         add("parse:context_log", Severity.ERROR, f"{type(exc).__name__}: {exc}")
         context_lines = []
-    try:
-        ET.parse(str(expected["fm_gen.xml"]))
-    except Exception as exc:
-        add("parse:fm_gen", Severity.ERROR, f"{type(exc).__name__}: {exc}")
+    fm_gen = root / "fm_gen.xml"
+    declared_complete = run_meta.get("completed") is True
+    if declared_complete and not fm_gen.exists():
+        add("presence:fm_gen.xml", Severity.ERROR, f"missing: {fm_gen}")
+    elif not declared_complete and fm_gen.exists():
+        add("consistency:fm_gen_on_incomplete", Severity.ERROR,
+            "fm_gen.xml exists although run_meta.completed is false")
+    if fm_gen.exists():
+        try:
+            parsed_final = ET.parse(str(fm_gen))
+            if parsed_final.getroot().tag != "featureModel":
+                add("parse:fm_gen_root", Severity.ERROR,
+                    f"expected <featureModel>, got <{parsed_final.getroot().tag}>")
+        except Exception as exc:
+            add("parse:fm_gen", Severity.ERROR, f"{type(exc).__name__}: {exc}")
 
     iter_files = sorted(expected["fm_iter/"].glob("step_*.xml"))
     for f in iter_files:
         try:
-            ET.parse(str(f))
+            parsed = ET.parse(str(f))
+            if parsed.getroot().tag != "featureModel":
+                add(f"parse:fm_iter/{f.name}:root", Severity.ERROR,
+                    f"expected <featureModel>, got <{parsed.getroot().tag}>")
         except Exception as exc:
             add(f"parse:fm_iter/{f.name}", Severity.ERROR, f"{type(exc).__name__}: {exc}")
 
     run_id = run_meta.get("run_id") or run_config.get("campaign_id")
 
-    # If parsing already failed, stop before consistency.
-    if any(f.severity == Severity.ERROR for f in findings):
-        return ValidationReport(run_root=root, run_id=run_id, findings=findings)
+    # XSD conformance is distinct from XML parseability. Validate every carried
+    # iteration so conformance can be measured longitudinally, and validate the
+    # final artefact explicitly for run-level admissibility.
+    schema_path = repo_root / "prompts/feature-model-schema.xsd"
+    if schema_path.exists():
+        try:
+            schema = xmlschema.XMLSchema(str(schema_path))
+        except Exception as exc:
+            add("xsd:schema_load", Severity.ERROR,
+                f"{type(exc).__name__}: {exc}")
+        else:
+            xsd_targets = list(iter_files)
+            if fm_gen.exists():
+                xsd_targets.append(fm_gen)
+            for target in xsd_targets:
+                errors = list(schema.iter_errors(str(target)))
+                if errors:
+                    label = "fm_gen" if target == fm_gen else f"fm_iter/{target.name}"
+                    add(f"xsd:{label}", Severity.ERROR, str(errors[0]))
+
+    # Syntax failures make downstream consistency checks unsafe. XSD failures
+    # do not: keep checking hashes and cross-artefact consistency so one report
+    # exposes every independent problem in a completed output.
+    if any(f.severity == Severity.ERROR and f.check.startswith("parse:")
+           for f in findings):
+        return ValidationReport(run_root=root, run_id=run_id,
+                                declared_complete=declared_complete,
+                                findings=findings)
 
     # ── 3. consistency
     if run_meta.get("run_id") != _canonical_run_id_from_config(run_config):
@@ -181,9 +247,17 @@ def validate_run(
             f"run_config-derived run_id={_canonical_run_id_from_config(run_config)!r}")
 
     steps_meta = run_meta.get("steps", [])
-    if len(steps_meta) != run_config.get("N"):
-        add("consistency:step_count", Severity.WARNING,
-            f"run_meta has {len(steps_meta)} step records but N={run_config.get('N')}")
+    planned_steps = run_config.get("N")
+    if declared_complete and len(steps_meta) != planned_steps:
+        add("consistency:step_count", Severity.ERROR,
+            f"completed run has {len(steps_meta)} step records but N={planned_steps}")
+    if not declared_complete:
+        add("status:run_incomplete", Severity.ERROR,
+            f"terminal_status={run_meta.get('terminal_status')!r}, "
+            f"failed_step={run_meta.get('failed_step')!r}")
+        if planned_steps is not None and len(steps_meta) > planned_steps:
+            add("consistency:step_count", Severity.ERROR,
+                f"incomplete run has {len(steps_meta)} records but N={planned_steps}")
 
     # One context_log line per step
     if len(context_lines) != len(steps_meta):
@@ -191,16 +265,38 @@ def validate_run(
             f"context_log has {len(context_lines)} lines but run_meta has "
             f"{len(steps_meta)} step records")
 
-    # One fm_iter file per feasible step
-    feasible_steps = [s for s in steps_meta if s.get("feasible") and s.get("fm_path")]
-    if len(iter_files) != len(feasible_steps):
+    # One .xml file per response admitted for carry-forward. A terminal model
+    # response must instead be preserved at raw_response_path.
+    carried_steps = [s for s in steps_meta if s.get("carry_forward")]
+    if len(iter_files) != len(carried_steps):
         add("consistency:fm_iter_count", Severity.ERROR,
-            f"{len(iter_files)} fm_iter files but {len(feasible_steps)} feasible steps in run_meta")
+            f"{len(iter_files)} fm_iter files but {len(carried_steps)} carried steps in run_meta")
+    for step in steps_meta:
+        if step.get("carry_forward"):
+            if step.get("finish_reason") != "stop":
+                add(f"consistency:finish_step_{step.get('step_index')}", Severity.ERROR,
+                    f"carried step has finish_reason={step.get('finish_reason')!r}")
+            if step.get("xml_parseable") is not True or step.get("expected_root") is not True:
+                add(f"consistency:xml_gate_step_{step.get('step_index')}", Severity.ERROR,
+                    "carried step did not pass XML integrity gate")
+            rel = step.get("fm_path")
+            if not rel or not (root / rel).exists():
+                add(f"presence:step_{step.get('step_index')}", Severity.ERROR,
+                    f"missing carried FM path: {rel!r}")
+        elif step.get("raw_response_path"):
+            raw_path = root / step["raw_response_path"]
+            if not raw_path.exists():
+                add(f"presence:raw_step_{step.get('step_index')}", Severity.ERROR,
+                    f"missing terminal raw response: {raw_path}")
+
+    if declared_complete and not all(s.get("carry_forward") for s in steps_meta):
+        add("consistency:completed_with_failed_step", Severity.ERROR,
+            "run_meta.completed is true but at least one step was not carried forward")
 
     # fm_gen.xml must equal the final fm_iter file
-    if iter_files:
+    if declared_complete and iter_files and fm_gen.exists():
         last_iter_text = iter_files[-1].read_text()
-        gen_text = expected["fm_gen.xml"].read_text()
+        gen_text = fm_gen.read_text()
         if last_iter_text != gen_text:
             add("consistency:fm_gen_vs_iter", Severity.ERROR,
                 f"fm_gen.xml differs from {iter_files[-1].name}")
@@ -214,10 +310,6 @@ def validate_run(
                 f"chunks from outside batch: {stray[:5]}")
 
     # ── 4. hash-pinning
-    if repo_root is None:
-        # Assume layout: <repo>/results/<campaign>/<corpus>/<config_hash>/<run_id>/
-        repo_root = root.parents[3] if len(root.parents) >= 4 else root
-    repo_root = Path(repo_root).expanduser().resolve()
     sha_file = Path(protocol_sha256) if protocol_sha256 else repo_root / "data/frozen/protocol.sha256"
     protocol = _load_protocol_hashes(sha_file)
 
@@ -243,11 +335,26 @@ def validate_run(
             add("hash:chunks_hash", Severity.ERROR,
                 f"run_config.chunks_hash mismatch for {chunks_rel}")
 
+    # The run records the embedding model digest itself, not the SHA-256 of
+    # encoder_versions.txt. Verify it against the pinned value inside the file.
+    encoder_versions = repo_root / "data/encoder_versions.txt"
+    if encoder_versions.exists() and run_config.get("encoder_digest"):
+        pinned_digest = None
+        for line in encoder_versions.read_text().splitlines():
+            if "embedding_ollama_digest:" in line:
+                pinned_digest = line.split(":", 1)[1].strip()
+                break
+        if pinned_digest and run_config["encoder_digest"] != pinned_digest:
+            add("hash:encoder_digest", Severity.ERROR,
+                "run_config.encoder_digest does not match data/encoder_versions.txt")
+
     # No mismatches → INFO summary
     if not findings:
         add("summary", Severity.INFO, f"run {run_id} is complete and consistent")
 
-    return ValidationReport(run_root=root, run_id=run_id, findings=findings)
+    return ValidationReport(run_root=root, run_id=run_id,
+                            declared_complete=declared_complete,
+                            findings=findings)
 
 
 def _canonical_run_id_from_config(run_config: Dict[str, Any]) -> str:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Phase 6 — one end-to-end smoke run through the unified engine.
+"""one end-to-end smoke run through the unified engine.
 
 By default runs with a FakeLLM (deterministic, no network) so we can verify
 D7/D8/D9/D10 wiring without cost. Pass ``--provider fake|ollama_cloud|openai``
@@ -10,7 +10,15 @@ Usage:
   python scripts/smoke_run.py                                 # Fake, fed N=1 nonrag
   python scripts/smoke_run.py --corpus repair --N 3
   python scripts/smoke_run.py --grounding rag --k-doc 5
-  python scripts/smoke_run.py --provider ollama_cloud --model glm-5.3-flash
+  python scripts/smoke_run.py --provider ollama_cloud --model minimax-m3:cloud
+  python scripts/smoke_run.py --provider ollama_cloud --model glm-5.3-flash:cloud
+  python scripts/smoke_run.py --provider ollama_cloud --model deepseek-v4-pro:cloud
+  python scripts/smoke_run.py --corpus repair --N 5 --grounding rag \
+      --provider ollama_cloud --model gpt-oss:120b-cloud \
+      --max-output-tokens 32768 --validate
+  python scripts/smoke_run.py --corpus repair --N 5 --grounding rag \
+      --provider ollama_cloud --model deepseek-v4.1-flash:cloud \
+      --max-output-tokens 32768 --validate
 """
 from __future__ import annotations
 
@@ -57,6 +65,8 @@ def _cli() -> argparse.Namespace:
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--k-doc", type=int, default=None,
                    help="Override RAG k_doc; defaults to experiment.yaml value.")
+    p.add_argument("--max-output-tokens", type=int, default=None,
+                   help="Pilot-only override; participates in the run ID and leaves frozen config unchanged.")
     p.add_argument("--metamodel-block", action="store_true", default=True,
                    help="Include metamodel prompt block (guided arm).")
     p.add_argument("--no-metamodel-block", dest="metamodel_block", action="store_false",
@@ -65,7 +75,7 @@ def _cli() -> argparse.Namespace:
     p.add_argument("--host", default=None,
                    help="Override LLM host (e.g. http://127.0.0.1:11434 for local Ollama).")
     p.add_argument("--validate", action="store_true",
-                   help="Run the Phase 6 validator on the produced run directory.")
+                   help="Run the logging-contract validator on the produced run directory.")
     p.add_argument("--force", action="store_true",
                    help="Overwrite the run directory if it already exists.")
     return p.parse_args()
@@ -137,7 +147,8 @@ def main() -> int:
         metamodel_hash=_hash_file(metamodel_xsd_path),
         chunks_hash=_hash_file(chunks_jsonl),
         encoder_digest=encoder_digest,
-        max_output_tokens=int(m_cfg["max_output_tokens"]),
+        max_output_tokens=(args.max_output_tokens if args.max_output_tokens is not None
+                           else int(m_cfg["max_output_tokens"])),
         temperature=float(m_cfg.get("temperature", 0.2)),
         reasoning_effort=m_cfg.get("reasoning_effort"),
         context_window=int(m_cfg["context_window_tokens"]),
@@ -147,6 +158,9 @@ def main() -> int:
     if args.provider == "ollama_cloud":
         llm_kwargs["api_key_env"] = "OLLAMA_API_KEY"
         llm_kwargs["api_key_file"] = "api_keys/ollama_key.txt"
+    elif args.provider == "openai":
+        llm_kwargs["api_key_env"] = "OPENAI_API_KEY"
+        llm_kwargs["api_key_file"] = "api_keys/openai_key.txt"
     if args.host:
         llm_kwargs["host"] = args.host
     llm = make_client(provider=args.provider, model_id=model_id, **llm_kwargs)
@@ -164,6 +178,7 @@ def main() -> int:
     print(f"===== smoke run: {run_cfg.run_id()} =====")
     print(f"  corpus={args.corpus}  N={args.N}  grounding={args.grounding}")
     print(f"  provider={args.provider}  model_id={model_id}")
+    print(f"  max_output_tokens={run_cfg.max_output_tokens}")
     print(f"  root={args.results_root}/{run_cfg.campaign_id}/{args.corpus}/{run_cfg.config_hash()}/{run_cfg.run_id()}")
 
     result = run_generation(
@@ -186,7 +201,25 @@ def main() -> int:
     print(f"  total_wall:       {result.total_wall_seconds}s")
     for s in result.steps:
         print(f"    step {s.step_index}: chunks={s.n_chunks}  assembled_tokens={s.assembled_tokens}  "
-              f"feasible={s.feasible}  finish={s.finish_reason}  wall={s.wall_seconds}s")
+              f"feasible={s.feasible}  finish={s.finish_reason}  "
+              f"completion_tokens={s.completion_tokens}  xml={s.xml_parseable}  "
+              f"carry={s.carry_forward}  wall={s.wall_seconds}s")
+
+    successful_completion_tokens = [
+        s.completion_tokens for s in result.steps
+        if s.carry_forward and s.completion_tokens is not None
+    ]
+    if successful_completion_tokens:
+        maximum = max(successful_completion_tokens)
+        headroom = run_cfg.max_output_tokens - maximum
+        print(f"  max successful completion: {maximum}")
+        print(f"  minimum output headroom:   {headroom} tokens "
+              f"({100.0 * headroom / run_cfg.max_output_tokens:.1f}%)")
+    if not result.completed:
+        failed = next((s for s in result.steps if not s.carry_forward), None)
+        if failed:
+            print(f"  terminal failure: step={failed.step_index} "
+                  f"reason={failed.terminal_failure or failed.error}")
 
     print()
     print(f"  fm_gen.xml: {'EXISTS' if result.paths.fm_gen.exists() else 'MISSING'}")
@@ -198,10 +231,12 @@ def main() -> int:
         print()
         print(f"===== validator =====")
         report = validate_run(result.paths.root, repo_root=REPO)
-        print(f"  complete: {report.complete}  errors: {report.n_errors}  warnings: {report.n_warnings}")
+        print(f"  execution_complete: {report.execution_complete}  "
+              f"xsd_valid: {report.xsd_valid}  admissible: {report.admissible}  "
+              f"errors: {report.n_errors}  warnings: {report.n_warnings}")
         for f in report.findings:
             print(f"  [{f.severity.value:7s}] {f.check}: {f.detail}")
-        return 0 if report.complete else 1
+        return 0 if report.admissible else 1
 
     return 0
 

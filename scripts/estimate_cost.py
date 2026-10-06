@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Phase 7.3 — extrapolate campaign cost + wall time from pilot data.
+"""extrapolate campaign cost + wall time from pilot data.
 
 Reads:
-  - results/<campaign_id>/run_matrix.json   (Phase 7.5 output)
-  - results/pilot-<date>/model_probe.json   (Phase 7.2 output; optional)
-  - results/pilot-<date>/<run_id>/run_meta.json (Phase 7.1 output; optional)
+  - results/<campaign_id>/run_matrix.json   (campaign output)
+  - results/pilot-<date>/model_probe.json   (campaign output; optional)
+  - results/pilot-<date>/<run_id>/run_meta.json (campaign output; optional)
 
 Combines with a static per-provider price table (see PRICE_TABLE below) to
 produce:
@@ -35,11 +35,12 @@ REPO = Path(__file__).resolve().parents[1]
 PRICE_TABLE: Dict[str, tuple[float, float]] = {
     # OpenAI reasoning tier (representative; adjust when gpt-6-astra pricing is known)
     "gpt-6-astra":        (10.00, 40.00),
-    # Ollama Pro cloud — subscription; effective marginal cost near zero.
-    "glm-5.3-flash":       (0.00,  0.00),
+    # Ollama cloud published token pricing.
+    "minimax-m3:cloud":          (0.60,  2.40),
     "deepseek-v4.1-flash": (0.00,  0.00),
-    # Placeholders for common substitutes
-    "gpt-oss:120b-cloud":  (0.00,  0.00),
+    "gpt-oss:120b-cloud":        (0.15,  0.60),
+    "glm-5.3-flash:cloud":       (0.15,  0.50),
+    "deepseek-v4-pro:cloud":     (0.66,  1.98),
 }
 
 

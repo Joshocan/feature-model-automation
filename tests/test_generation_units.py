@@ -1,4 +1,4 @@
-"""Unit tests for the Phase 5 generation building blocks.
+"""Unit tests for the generation building blocks.
 
 Covers batching, token budget, prompt assembly, LLM client Protocol, persistence,
 and run_id derivation. No network. No Ollama. No real Chroma.
@@ -15,6 +15,7 @@ from fame.generation.llm_client import (
     FakeLLM,
     GenerationLLM,
     GenerationRequest,
+    OllamaCloudLLM,
     make_client,
 )
 from fame.generation.persistence import (
@@ -24,6 +25,7 @@ from fame.generation.persistence import (
     atomic_write_text,
 )
 from fame.generation.prompt_assembly import render_prompt
+from fame.generation.loop import _ollama_think_value
 from fame.generation.run import RunConfig
 from fame.generation.token_budget import (
     UniversalCounter,
@@ -170,6 +172,13 @@ def test_render_prompt_single_stage_no_metamodel() -> None:
     assert "REFINEMENT POLICY" not in bundle.text
     # Root feature is present
     assert "Repair" in bundle.text
+    # Anti-enumeration guidance is invariant across experimental arms.
+    assert "is not evidence for a new feature" in bundle.text
+    assert "Do not enumerate combinations or permutations" in bundle.text
+    assert "Do not append numeric suffixes" in bundle.text
+    assert "reuse that feature" in bundle.text
+    assert "represent them as multiple hierarchy levels" in bundle.text
+    assert "Do not invent hierarchy merely to" in bundle.text
 
 
 def test_render_prompt_iterative_with_metamodel() -> None:
@@ -244,6 +253,46 @@ def test_make_client_dispatches_fake() -> None:
 def test_make_client_rejects_unknown() -> None:
     with pytest.raises(ValueError):
         make_client(provider="claude", model_id="opus")
+
+
+def test_ollama_think_mapping_uses_levels_for_level_only_models() -> None:
+    assert _ollama_think_value("glm-5.3-flash:cloud", "low") == "low"
+    assert _ollama_think_value("gpt-oss:120b-cloud", "high") == "high"
+    assert _ollama_think_value("glm-5.3-flash:cloud", None) == "low"
+
+
+def test_ollama_think_mapping_keeps_boolean_policy_for_other_models() -> None:
+    assert _ollama_think_value("minimax-m3:cloud", "low") is False
+    assert _ollama_think_value("deepseek-v4.1-flash:cloud", "medium") is True
+
+
+def test_ollama_client_preserves_literal_thinking_level(monkeypatch) -> None:
+    captured = {}
+
+    class Response:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {
+                "response": "<featureModel/>",
+                "done": True,
+                "done_reason": "stop",
+            }
+
+    def fake_post(url, *, headers, data, timeout):
+        captured.update(json.loads(data))
+        return Response()
+
+    monkeypatch.setattr("fame.generation.llm_client.requests.post", fake_post)
+    client = OllamaCloudLLM(model_id="glm-5.3-flash:cloud")
+    client.generate(GenerationRequest(
+        prompt="p",
+        max_output_tokens=100,
+        think="low",
+    ))
+
+    assert captured["think"] == "low"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

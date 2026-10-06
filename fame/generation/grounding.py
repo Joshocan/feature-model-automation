@@ -1,4 +1,4 @@
-"""Grounding — assemble the CONTEXT block per step (Phase 5.3, 5.4).
+"""Grounding — assemble the CONTEXT block per step.
 
 * **Non-RAG:** every chunk of ``B_j``, in deterministic chunk_id order, no
   selection, no k.
@@ -138,6 +138,52 @@ def build_grounding(
             domain=domain,
         )
     raise ValueError(f"unknown grounding: {grounding!r} (expected 'rag' or 'nonrag')")
+
+
+def build_grounding_from_record(
+    *,
+    record: Dict[str, Any],
+    chunks_jsonl: Path | str,
+) -> GroundingContext:
+    """Rehydrate the exact evidence selection recorded for a failed call.
+
+    Resume must not repeat vector retrieval: approximate-nearest-neighbour
+    ordering can vary even when the index and query are unchanged. Text is
+    loaded from the frozen canonical chunk store and ordered by recorded IDs.
+    """
+    all_chunks = _load_chunks_jsonl(Path(chunks_jsonl).expanduser().resolve())
+    by_id = {c["chunk_id"]: c for c in all_chunks}
+    chunk_ids = list(record.get("chunk_ids") or [])
+    doc_ids = list(record.get("chunk_doc_ids") or [])
+    scores = list(record.get("retrieval_scores") or [])
+    sub_queries = list(record.get("sub_query_indices") or [])
+    if not chunk_ids or not (len(chunk_ids) == len(doc_ids) == len(scores) == len(sub_queries)):
+        raise ValueError("recorded RAG context has inconsistent chunk metadata")
+    missing = [chunk_id for chunk_id in chunk_ids if chunk_id not in by_id]
+    if missing:
+        raise ValueError(f"recorded RAG chunks are absent from the frozen store: {missing}")
+    evidence: List[ChunkEvidence] = []
+    for chunk_id, doc_id, distance, sub_query_index in zip(
+            chunk_ids, doc_ids, scores, sub_queries):
+        chunk = by_id[chunk_id]
+        if chunk["doc_id"] != doc_id:
+            raise ValueError(f"recorded doc_id mismatch for chunk {chunk_id}")
+        evidence.append(ChunkEvidence(
+            chunk_id=chunk_id,
+            doc_id=doc_id,
+            text=chunk["text"],
+            offset_start=chunk["offsets"][0],
+            offset_end=chunk["offsets"][1],
+            distance=distance,
+            sub_query_index=sub_query_index,
+        ))
+    return GroundingContext(
+        grounding=str(record.get("grounding")),
+        batch_doc_ids=list(record.get("batch_doc_ids") or []),
+        chunks=evidence,
+        k_step=record.get("k_step"),
+        per_sub_query_k=record.get("per_sub_query_k"),
+    )
 
 
 def format_context_text(gc: GroundingContext) -> str:

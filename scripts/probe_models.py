@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Phase 7.2 + 7.4 — probe each configured campaign model.
+"""+ 7.4 — probe each configured campaign model.
 
 For every model in ``config/experiment.yaml.generation_models``:
 
@@ -8,7 +8,7 @@ For every model in ``config/experiment.yaml.generation_models``:
      finish_reason, and whether reported prompt_tokens ~ matches our
      universal char/4 estimate for this text
   3. Repeat a short burst (default 5 calls in quick succession) to probe
-     rate-limit / backoff behaviour (Phase 6.V4)
+     rate-limit / backoff behaviour
 
 Emits ``results/pilot-<date>/model_probe.json`` with per-model records.
 Exits non-zero if any model is unreachable.
@@ -17,7 +17,7 @@ Usage:
   python scripts/probe_models.py
   python scripts/probe_models.py --burst 10           # more aggressive backoff probe
   python scripts/probe_models.py --no-burst           # skip 7.4
-  python scripts/probe_models.py --only glm_5_3_flash
+  python scripts/probe_models.py --only minimax_m3
 """
 from __future__ import annotations
 
@@ -34,6 +34,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
 from fame.generation import GenerationRequest, make_client  # noqa: E402
+from fame.generation.loop import _ollama_think_value  # noqa: E402
 from fame.generation.token_budget import universal_estimate  # noqa: E402
 
 
@@ -49,7 +50,7 @@ def _cli() -> argparse.Namespace:
                    help="Backoff probe: N quick-fire calls to trigger 429/backoff.")
     p.add_argument("--no-burst", action="store_true")
     p.add_argument("--only", default=None,
-                   help="Only probe this generation_models key (e.g. 'glm_5_3_flash').")
+                   help="Only probe this generation_models key (e.g. 'minimax_m3').")
     p.add_argument("--out", default=None,
                    help="Output JSON path (default: results/pilot-<date>/model_probe.json)")
     return p.parse_args()
@@ -81,15 +82,22 @@ def probe_one(name: str, cfg: dict, *, burst: int = 0) -> dict:
         record["error"] = f"client_init: {type(exc).__name__}: {exc}"
         return record
 
-    # 1. Single small call
+    # 1. Single small call. Allow enough output tokens for a reasoning model's
+    #    silent thinking plus the 8-char "OK-1" answer. 32 is too tight if
+    #    reasoning_effort=medium/high — hits `finish=length` with empty text.
     est_prompt_tokens = universal_estimate(PROBE_PROMPT)
+    think = (
+        _ollama_think_value(cfg["model_id"], cfg.get("reasoning_effort"))
+        if cfg["provider"] == "ollama_cloud" else None
+    )
     t0 = time.time()
     try:
         resp = llm.generate(GenerationRequest(
             prompt=PROBE_PROMPT,
-            max_output_tokens=32,
+            max_output_tokens=512,
             temperature=0.0,
             reasoning_effort=cfg.get("reasoning_effort"),
+            think=think,
         ))
         record["reachable"] = True
         record["single_call"] = {
@@ -112,7 +120,8 @@ def probe_one(name: str, cfg: dict, *, burst: int = 0) -> dict:
             try:
                 r = llm.generate(GenerationRequest(prompt=PROBE_PROMPT,
                                                     max_output_tokens=16,
-                                                    temperature=0.0))
+                                                    temperature=0.0,
+                                                    think=think))
                 record["burst"].append({
                     "i":              i,
                     "wall_seconds":   r.wall_seconds,

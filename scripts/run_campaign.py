@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Phase 7 — main campaign runner (skeleton).
+"""Deprecated non-interactive campaign runner.
 
 Reads a JSON campaign spec listing the RunConfigs to execute and dispatches
-them sequentially through the unified engine. Extended in Phase 7 with the
+them sequentially through the unified engine. Extended with the
 full arm matrix (guided headline, curve, ablation, order sensitivity, k
 sweep).
 
-For now this exposes the plumbing so a Phase 7 spec author can just enumerate
-run configs and hit "go". Retries, backoff, budget tracking, and rate-limit
-respect land here alongside the spec format.
+Live execution moved to ``scripts/campaign.py``, which provides validation,
+terminal-outcome accounting, lane filtering, and per-run locks. This legacy
+entry point remains available only for no-network ``--dry-run`` inspection.
 
 Usage:
   python scripts/run_campaign.py --spec results/<campaign>/spec.json
@@ -72,6 +72,10 @@ def _make_counter(provider: str, model_id: str) -> Any:
 
 def main() -> int:
     args = _cli()
+    if not args.dry_run:
+        print("scripts/run_campaign.py is retired for live execution; "
+              "use scripts/campaign.py with a frozen lane matrix")
+        return 2
     spec = json.loads(args.spec.read_text())
     cfg = yaml.safe_load((REPO / "config/experiment.yaml").read_text())
 
@@ -88,9 +92,12 @@ def main() -> int:
             encoder_digest = line.split(":", 1)[1].strip()
             break
 
-    runs: List[Dict[str, Any]] = spec.get("runs", [])
+    all_runs: List[Dict[str, Any]] = spec.get("runs", [])
+    runs = [r for r in all_runs if r.get("extra", {}).get("enabled", True)]
+    skipped_disabled = len(all_runs) - len(runs)
     print(f"campaign {spec.get('campaign_id')}: {len(runs)} runs planned "
-          f"({'DRY RUN' if args.dry_run else 'live'})")
+          f"({'DRY RUN' if args.dry_run else 'live'})"
+          + (f", {skipped_disabled} skipped as disabled" if skipped_disabled else ""))
 
     total_t0 = time.time()
     ok = failed = 0
@@ -138,9 +145,13 @@ def main() -> int:
                 token_counter=counter,
             )
             dt = time.time() - t0
-            steps_ok = sum(1 for s in result.steps if s.finish_reason == "stop")
-            print(f"{prefix}  → {result.run_id}  steps_ok={steps_ok}/{len(result.steps)}  wall={dt:.1f}s")
-            ok += 1
+            steps_ok = sum(1 for s in result.steps if s.carry_forward)
+            print(f"{prefix}  → {result.run_id}  steps_ok={steps_ok}/{run_cfg.N}  "
+                  f"completed={result.completed}  wall={dt:.1f}s")
+            if result.completed:
+                ok += 1
+            else:
+                failed += 1
         except Exception as exc:
             print(f"{prefix}  → FAILED  {type(exc).__name__}: {exc}")
             failed += 1

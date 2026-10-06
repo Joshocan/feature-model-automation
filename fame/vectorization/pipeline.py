@@ -1,4 +1,4 @@
-"""Corpus indexing orchestrator (Phase 4.6).
+"""Corpus indexing orchestrator.
 
 Reads a canonical ``chunks.jsonl`` (D11), embeds each chunk with the mandatory
 ``search_document:`` prefix, and writes to a persistent Chroma collection.
@@ -63,6 +63,10 @@ def build_index(
         client,
         name=location.collection_name,
         metadata={
+            # Chroma defaults to L2 unless this is set at collection creation.
+            # The experiment protocol specifies cosine and this property cannot
+            # be changed in-place, so every build resets the collection first.
+            "hnsw:space":            "cosine",
             "corpus":                 corpus,
             "chunks_source":          str(chunks_jsonl),
             "preprocessing_version":  (chunks[0]["preprocessing_version"] if chunks else ""),
@@ -101,6 +105,12 @@ def build_index(
         failed_total += failed
         if on_progress:
             on_progress(end, len(ids))
+
+    if failed_total or added_total != len(chunks):
+        raise RuntimeError(
+            f"index build incomplete for {corpus}: read={len(chunks)}, "
+            f"upserted={added_total}, failed={failed_total}"
+        )
 
     return IndexBuildReport(
         corpus=corpus,

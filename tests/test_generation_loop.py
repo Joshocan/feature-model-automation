@@ -1,4 +1,4 @@
-"""End-to-end tests for the unified generation loop (Phase 5).
+"""End-to-end tests for the unified generation loop.
 
 Runs the loop against a ``FakeLLM`` with a hand-built miniature corpus
 (chunks.jsonl fixture + tiny orderings.json + tiny XSD). Exercises:
@@ -13,7 +13,7 @@ Runs the loop against a ``FakeLLM`` with a hand-built miniature corpus
 
 RAG-side tests (5.T5) use the retrieval unit tests in test_retrieval.py plus
 this file's Non-RAG round-trip; a live-Chroma RAG round-trip is deferred to
-Phase 6 smoke.
+logging-contract smoke.
 """
 from __future__ import annotations
 
@@ -197,10 +197,10 @@ def test_infeasible_step_does_not_call_model(tmp_path: Path) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def test_truncation_surfaces_in_run_meta(tmp_path: Path) -> None:
-    chunks_jsonl, orderings_json = _make_mini_corpus(tmp_path, n_docs=2, chunks_per_doc=1)
+    chunks_jsonl, orderings_json = _make_mini_corpus(tmp_path, n_docs=3, chunks_per_doc=1)
     lm = FakeLLM(responses=["<featureModel/>"], finish_reason="length")
     result = run_generation(
-        config=_make_cfg(N=1),
+        config=_make_cfg(N=3),
         llm=lm,
         orderings_json=orderings_json,
         chunks_jsonl=chunks_jsonl,
@@ -208,9 +208,54 @@ def test_truncation_surfaces_in_run_meta(tmp_path: Path) -> None:
         metamodel_xsd_text=_MINI_XSD,
         results_root=tmp_path / "results",
     )
+    assert len(lm.seen_requests) == 1
+    assert len(result.steps) == 1
     assert result.steps[0].finish_reason == "length"
+    assert result.steps[0].terminal_failure == "truncated_output"
+    assert result.steps[0].carry_forward is False
+    assert result.steps[0].raw_response_path is not None
+    assert result.steps[0].xml_parseable is True  # still measured, never carried
+    assert result.completed is False
+    assert not result.paths.fm_gen.exists()
     meta = json.loads(result.paths.run_meta.read_text())
     assert meta["steps"][0]["finish_reason"] == "length"
+    assert meta["failed_step"] == 0
+    assert meta["completed_steps"] == 0
+    assert meta["max_completion_tokens_observed"] is not None
+    assert meta["max_successful_completion_tokens"] is None
+    assert meta["length_finish_count"] == 1
+
+
+def test_malformed_xml_stops_before_next_step(tmp_path: Path) -> None:
+    chunks_jsonl, orderings_json = _make_mini_corpus(tmp_path, n_docs=3, chunks_per_doc=1)
+    lm = FakeLLM(responses=["<featureModel><struct>", "<featureModel/>"])
+    result = run_generation(
+        config=_make_cfg(N=3), llm=lm,
+        orderings_json=orderings_json, chunks_jsonl=chunks_jsonl,
+        prompt_template_path=TEMPLATE, metamodel_xsd_text=_MINI_XSD,
+        results_root=tmp_path / "results",
+    )
+    assert len(lm.seen_requests) == 1
+    assert result.steps[0].terminal_failure == "malformed_xml"
+    assert result.steps[0].xml_parseable is False
+    assert result.steps[0].raw_response_path is not None
+    assert not result.paths.fm_gen.exists()
+
+
+def test_unexpected_xml_root_is_not_carried_forward(tmp_path: Path) -> None:
+    chunks_jsonl, orderings_json = _make_mini_corpus(tmp_path, n_docs=2, chunks_per_doc=1)
+    lm = FakeLLM(responses=["<notAFeatureModel/>", "<featureModel/>"])
+    result = run_generation(
+        config=_make_cfg(N=2), llm=lm,
+        orderings_json=orderings_json, chunks_jsonl=chunks_jsonl,
+        prompt_template_path=TEMPLATE, metamodel_xsd_text=_MINI_XSD,
+        results_root=tmp_path / "results",
+    )
+    assert len(lm.seen_requests) == 1
+    assert result.steps[0].xml_parseable is True
+    assert result.steps[0].expected_root is False
+    assert result.steps[0].terminal_failure == "unexpected_xml_root"
+    assert not result.paths.fm_gen.exists()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -219,7 +264,9 @@ def test_truncation_surfaces_in_run_meta(tmp_path: Path) -> None:
 
 def test_different_configs_do_not_overwrite(tmp_path: Path) -> None:
     chunks_jsonl, orderings_json = _make_mini_corpus(tmp_path, n_docs=2, chunks_per_doc=1)
-    lm = FakeLLM(responses=["<a/>", "<b/>"])
+    fm_a = '<featureModel id="a"/>'
+    fm_c = '<featureModel id="c"/>'
+    lm = FakeLLM(responses=[fm_a])
     r1 = run_generation(
         config=_make_cfg(N=1, seed=0),
         llm=lm,
@@ -231,7 +278,7 @@ def test_different_configs_do_not_overwrite(tmp_path: Path) -> None:
     )
     r2 = run_generation(
         config=_make_cfg(N=1, seed=1),   # only seed differs
-        llm=FakeLLM(responses=["<c/>"]),
+        llm=FakeLLM(responses=[fm_c]),
         orderings_json=orderings_json,
         chunks_jsonl=chunks_jsonl,
         prompt_template_path=TEMPLATE,
@@ -241,8 +288,8 @@ def test_different_configs_do_not_overwrite(tmp_path: Path) -> None:
     assert r1.run_id != r2.run_id
     assert r1.paths.root != r2.paths.root
     # Both fm_gen files exist and hold their own scripted responses
-    assert r1.paths.fm_gen.read_text() == "<a/>"
-    assert r2.paths.fm_gen.read_text() == "<c/>"
+    assert r1.paths.fm_gen.read_text() == fm_a
+    assert r2.paths.fm_gen.read_text() == fm_c
 
 
 # ─────────────────────────────────────────────────────────────────────────────

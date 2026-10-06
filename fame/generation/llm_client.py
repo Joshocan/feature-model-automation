@@ -1,9 +1,9 @@
-"""LLM client abstractions for the campaign (Phase 5.6, 5.7, 6.V4).
+"""LLM client abstractions for the campaign.
 
 Single ``GenerationLLM`` Protocol. Three implementations:
 
 * :class:`FakeLLM`         — deterministic in-memory, for tests + fixtures
-* :class:`OllamaCloudLLM`  — Ollama HTTP for open-weight glm/deepseek
+* :class:`OllamaCloudLLM`  — Ollama HTTP for MiniMax/DeepSeek/GPT-OSS/GLM
                              (also usable for local Ollama via ``host=``)
 * :class:`OpenAILLM`       — OpenAI REST for gpt-6-astra
 
@@ -23,7 +23,7 @@ import random
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Protocol, TypeVar, runtime_checkable
+from typing import Any, Callable, Dict, Optional, Protocol, TypeVar, Union, runtime_checkable
 
 import requests
 
@@ -39,7 +39,8 @@ _TRANSIENT_STATUS_CODES = frozenset({408, 429, 500, 502, 503, 504})
 
 def _is_transient(exc: Exception) -> bool:
     """True if ``exc`` looks like a temporary provider failure."""
-    if isinstance(exc, (requests.ConnectionError, requests.Timeout)):
+    if isinstance(exc, (requests.ConnectionError, requests.Timeout,
+                        requests.exceptions.ChunkedEncodingError)):
         return True
     if isinstance(exc, requests.HTTPError):
         status = getattr(exc.response, "status_code", None)
@@ -54,6 +55,7 @@ def _with_retry(
     max_attempts: int = 3,
     base_seconds: float = 2.0,
     cap_seconds: float = 60.0,
+    on_retry: Optional[Callable[[Exception, int, float], None]] = None,
 ) -> T:
     """Call ``fn()`` with exponential backoff on transient errors.
 
@@ -67,9 +69,15 @@ def _with_retry(
         except Exception as exc:
             last_exc = exc
             if not _is_transient(exc) or attempt == max_attempts - 1:
+                try:
+                    setattr(exc, "fame_attempts", attempt + 1)
+                except Exception:
+                    pass
                 raise
             delay = min(cap_seconds, base_seconds * (2 ** attempt))
             delay += random.uniform(0, 0.5)  # small jitter
+            if on_retry:
+                on_retry(exc, attempt + 1, delay)
             time.sleep(delay)
     # Unreachable — the loop always either returns or raises.
     raise RuntimeError(f"retry loop fell through (last_exc={last_exc!r})")
@@ -84,7 +92,8 @@ class GenerationRequest:
     prompt: str
     max_output_tokens: int
     temperature: float = 0.2
-    reasoning_effort: Optional[str] = None   # "low" | "medium" | "high" | None
+    reasoning_effort: Optional[str] = None   # "low" | "medium" | "high" | None (OpenAI)
+    think: Optional[Union[bool, str]] = None # Ollama toggle/effort level; None = provider default
     seed: Optional[int] = None
     stop: Optional[list] = None
 
@@ -150,13 +159,13 @@ class FakeLLM:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# OllamaCloudLLM — for glm-5.3-flash, deepseek-v4.1-flash
+# OllamaCloudLLM — for minimax-m3, deepseek-v4.1-flash, gpt-oss:120b, GLM 5.3 Flash
 # ─────────────────────────────────────────────────────────────────────────────
 
 @dataclass
 class OllamaCloudLLM:
     """Chat/generate over Ollama HTTP for cloud-hosted open-weight models."""
-    model_id: str                                       # e.g. "glm-5.3-flash"
+    model_id: str                                       # e.g. "minimax-m3:cloud"
     host: str = "https://ollama.com"
     provider: str = "ollama_cloud"
     api_key_env: str = "OLLAMA_API_KEY"
@@ -180,6 +189,8 @@ class OllamaCloudLLM:
         return h
 
     def generate(self, request: GenerationRequest) -> GenerationResponse:
+        attempts = 0
+        retry_events: list[Dict[str, Any]] = []
         payload: Dict[str, Any] = {
             "model": self.model_id,
             "prompt": request.prompt,
@@ -191,12 +202,17 @@ class OllamaCloudLLM:
         }
         if request.seed is not None:
             payload["options"]["seed"] = request.seed
-        if request.reasoning_effort:
-            payload["options"]["reasoning_effort"] = request.reasoning_effort
+        # Ollama accepts either a boolean toggle or a literal effort level.
+        # Preserve strings such as "low"; bool("low") would incorrectly send
+        # true and allow unbounded reasoning to consume the output budget.
+        if request.think is not None:
+            payload["think"] = request.think
         if request.stop:
             payload["options"]["stop"] = list(request.stop)
 
         def _call() -> tuple[Dict[str, Any], float]:
+            nonlocal attempts
+            attempts += 1
             t0 = time.time()
             r = requests.post(
                 f"{self.host}/api/generate",
@@ -208,7 +224,19 @@ class OllamaCloudLLM:
             r.raise_for_status()
             return r.json(), dt
 
-        data, dt = _with_retry(_call)
+        def _on_retry(exc: Exception, attempt: int, delay: float) -> None:
+            retry_events.append({
+                "attempt": attempt,
+                "status_code": getattr(getattr(exc, "response", None), "status_code", None),
+                "error_type": type(exc).__name__,
+                "delay_seconds": round(delay, 3),
+            })
+
+        try:
+            data, dt = _with_retry(_call, on_retry=_on_retry)
+        except Exception as exc:
+            setattr(exc, "fame_retry_events", retry_events)
+            raise
         text = data.get("response", "")
         # Ollama's finish reason surfaces as ``done_reason`` or ``done``
         done_reason = str(data.get("done_reason") or ("stop" if data.get("done") else "unknown"))
@@ -220,7 +248,9 @@ class OllamaCloudLLM:
             wall_seconds=round(dt, 2),
             provider=self.provider,
             model_id=self.model_id,
-            raw={k: v for k, v in data.items() if k != "response"},
+            raw={**{k: v for k, v in data.items() if k != "response"},
+                 "fame_provider_attempts": attempts,
+                 "fame_retry_events": retry_events},
         )
 
 
@@ -255,6 +285,8 @@ class OpenAILLM:
         }
 
     def generate(self, request: GenerationRequest) -> GenerationResponse:
+        attempts = 0
+        retry_events: list[Dict[str, Any]] = []
         payload: Dict[str, Any] = {
             "model": self.model_id,
             "messages": [{"role": "user", "content": request.prompt}],
@@ -269,6 +301,8 @@ class OpenAILLM:
             payload["stop"] = list(request.stop)
 
         def _call() -> tuple[Dict[str, Any], float]:
+            nonlocal attempts
+            attempts += 1
             t0 = time.time()
             r = requests.post(
                 f"{self.base_url}/chat/completions",
@@ -277,10 +311,35 @@ class OpenAILLM:
                 timeout=self.timeout_s,
             )
             dt = time.time() - t0
+            if not r.ok:
+                try:
+                    error = (r.json() or {}).get("error") or {}
+                    details = ", ".join(
+                        f"{key}={error[key]!r}"
+                        for key in ("type", "code", "param", "message")
+                        if error.get(key) is not None
+                    )
+                except (ValueError, AttributeError):
+                    details = "non-JSON error response"
+                raise requests.HTTPError(
+                    f"OpenAI API HTTP {r.status_code}: {details}", response=r
+                )
             r.raise_for_status()
             return r.json(), dt
 
-        data, dt = _with_retry(_call)
+        def _on_retry(exc: Exception, attempt: int, delay: float) -> None:
+            retry_events.append({
+                "attempt": attempt,
+                "status_code": getattr(getattr(exc, "response", None), "status_code", None),
+                "error_type": type(exc).__name__,
+                "delay_seconds": round(delay, 3),
+            })
+
+        try:
+            data, dt = _with_retry(_call, on_retry=_on_retry)
+        except Exception as exc:
+            setattr(exc, "fame_retry_events", retry_events)
+            raise
         choice = (data.get("choices") or [{}])[0]
         text = (choice.get("message") or {}).get("content", "")
         finish_reason = str(choice.get("finish_reason") or "unknown")
@@ -293,7 +352,9 @@ class OpenAILLM:
             wall_seconds=round(dt, 2),
             provider=self.provider,
             model_id=self.model_id,
-            raw={"id": data.get("id"), "system_fingerprint": data.get("system_fingerprint")},
+            raw={"id": data.get("id"), "system_fingerprint": data.get("system_fingerprint"),
+                 "fame_provider_attempts": attempts,
+                 "fame_retry_events": retry_events},
         )
 
 

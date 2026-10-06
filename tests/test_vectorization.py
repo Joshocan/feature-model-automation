@@ -1,15 +1,18 @@
-"""Tests for the Phase 4b vectorization primitives.
+"""Tests for the vectorization primitives.
 
 These tests deliberately avoid network / Ollama / real Chroma: they exercise
 prefix enforcement and the deterministic collection-location contract only.
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 from fame.vectorization.chroma_indexer import ChromaLocation
+from fame.vectorization.pipeline import build_index
 from fame.vectorization.embeddings import (
     DOC_PREFIX,
     QUERY_PREFIX,
@@ -51,6 +54,40 @@ def test_chroma_location_different_per_corpus(tmp_path: Path) -> None:
     b = ChromaLocation.for_corpus(tmp_path, "repair")
     assert a.path != b.path
     assert a.collection_name != b.collection_name
+
+
+def test_build_index_creates_cosine_collection(tmp_path: Path) -> None:
+    chunks = tmp_path / "chunks.jsonl"
+    chunks.write_text(json.dumps({
+        "chunk_id": "c1", "doc_id": "d1", "offsets": [0, 4],
+        "text": "body", "preprocessing_version": "test-v1",
+    }) + "\n")
+    collection = object()
+    with patch("fame.vectorization.pipeline.open_client", return_value=object()), \
+         patch("fame.vectorization.pipeline.reset_collection", return_value=collection) as reset, \
+         patch("fame.vectorization.pipeline.upsert_chunks", return_value=(1, 0)):
+        build_index(
+            corpus="repair", chunks_jsonl=chunks, chroma_root=tmp_path / "chroma",
+            embedder=_FakeEmbedder(),
+        )
+    metadata = reset.call_args.kwargs["metadata"]
+    assert metadata["hnsw:space"] == "cosine"
+
+
+def test_build_index_rejects_partial_embedding_failure(tmp_path: Path) -> None:
+    chunks = tmp_path / "chunks.jsonl"
+    chunks.write_text(json.dumps({
+        "chunk_id": "c1", "doc_id": "d1", "offsets": [0, 4],
+        "text": "body", "preprocessing_version": "test-v1",
+    }) + "\n")
+    with patch("fame.vectorization.pipeline.open_client", return_value=object()), \
+         patch("fame.vectorization.pipeline.reset_collection", return_value=object()), \
+         patch("fame.vectorization.pipeline.upsert_chunks", return_value=(0, 1)):
+        with pytest.raises(RuntimeError, match="index build incomplete"):
+            build_index(
+                corpus="repair", chunks_jsonl=chunks,
+                chroma_root=tmp_path / "chroma", embedder=_FakeEmbedder(),
+            )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

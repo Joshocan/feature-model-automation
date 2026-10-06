@@ -1,4 +1,4 @@
-"""Phase 6.V3 failure-mode tests for the generation loop.
+"""failure-mode tests for the generation loop.
 
 Covers:
 - provider exception surfaces via ``step.error``
@@ -16,7 +16,8 @@ import pytest
 import requests
 
 from fame.generation import FakeLLM, RunAlreadyExists, RunConfig, run_generation
-from fame.generation.llm_client import _is_transient, _with_retry
+from fame.generation.llm_client import (GenerationResponse, _is_transient,
+                                        _with_retry)
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -150,6 +151,25 @@ class _RaisingLLM:
         raise self._exc
 
 
+class _SequenceLLM:
+    provider = "test"
+    model_id = "sequence"
+
+    def __init__(self, outcomes) -> None:
+        self.outcomes = list(outcomes)
+        self.seen_requests = []
+
+    def generate(self, request):
+        self.seen_requests.append(request)
+        outcome = self.outcomes.pop(0)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return GenerationResponse(
+            text=outcome, finish_reason="stop", prompt_tokens=10,
+            completion_tokens=5, provider=self.provider, model_id=self.model_id,
+        )
+
+
 def test_provider_exception_captured_in_step_error(tmp_path: Path) -> None:
     """Non-transient errors from generate() must surface in the step record
     and not crash the loop."""
@@ -177,7 +197,7 @@ def test_resume_guard_refuses_without_force(tmp_path: Path) -> None:
     # First run
     run_generation(
         config=cfg,
-        llm=FakeLLM(responses=["<a/>"]),
+        llm=FakeLLM(responses=['<featureModel id="a"/>']),
         orderings_json=orderings, chunks_jsonl=chunks,
         prompt_template_path=TEMPLATE, metamodel_xsd_text="<xs:schema/>",
         results_root=tmp_path / "results",
@@ -186,7 +206,7 @@ def test_resume_guard_refuses_without_force(tmp_path: Path) -> None:
     with pytest.raises(RunAlreadyExists):
         run_generation(
             config=cfg,
-            llm=FakeLLM(responses=["<b/>"]),
+            llm=FakeLLM(responses=['<featureModel id="b"/>']),
             orderings_json=orderings, chunks_jsonl=chunks,
             prompt_template_path=TEMPLATE, metamodel_xsd_text="<xs:schema/>",
             results_root=tmp_path / "results",
@@ -198,17 +218,71 @@ def test_resume_guard_allows_with_force(tmp_path: Path) -> None:
     cfg = _cfg()
     run_generation(
         config=cfg,
-        llm=FakeLLM(responses=["<a/>"]),
+        llm=FakeLLM(responses=['<featureModel id="a"/>']),
         orderings_json=orderings, chunks_jsonl=chunks,
         prompt_template_path=TEMPLATE, metamodel_xsd_text="<xs:schema/>",
         results_root=tmp_path / "results",
     )
     result = run_generation(
         config=cfg,
-        llm=FakeLLM(responses=["<b/>"]),
+        llm=FakeLLM(responses=['<featureModel id="b"/>']),
         orderings_json=orderings, chunks_jsonl=chunks,
         prompt_template_path=TEMPLATE, metamodel_xsd_text="<xs:schema/>",
         results_root=tmp_path / "results",
         force=True,
     )
-    assert result.paths.fm_gen.read_text() == "<b/>"
+    assert result.paths.fm_gen.read_text() == '<featureModel id="b"/>'
+
+
+def test_resume_provider_failure_calls_only_failed_step(tmp_path: Path) -> None:
+    chunks, orderings = _mini_fixtures(tmp_path)
+    cfg = _cfg(N=2)
+    first_xml = '<featureModel><struct><and name="R"/></struct></featureModel>'
+    final_xml = '<featureModel><struct><and name="R"><feature name="B"/></and></struct></featureModel>'
+    initial = _SequenceLLM([first_xml, requests.ConnectionError("gateway lost")])
+    failed = run_generation(
+        config=cfg, llm=initial, orderings_json=orderings,
+        chunks_jsonl=chunks, prompt_template_path=TEMPLATE,
+        metamodel_xsd_text="<xs:schema/>", results_root=tmp_path / "results",
+    )
+    assert failed.completed is False
+    assert failed.steps[-1].terminal_failure == "provider_error"
+    assert len(initial.seen_requests) == 2
+
+    resumed_llm = _SequenceLLM([final_xml])
+    resumed = run_generation(
+        config=cfg, llm=resumed_llm, orderings_json=orderings,
+        chunks_jsonl=chunks, prompt_template_path=TEMPLATE,
+        metamodel_xsd_text="<xs:schema/>", results_root=tmp_path / "results",
+        resume_provider_failure=True,
+    )
+    assert resumed.completed is True
+    assert resumed.invocation_start_step == 1
+    assert len(resumed_llm.seen_requests) == 1
+    assert first_xml in resumed_llm.seen_requests[0].prompt
+    assert [s.step_index for s in resumed.steps] == [0, 1]
+    assert resumed.paths.fm_gen.read_text() == final_xml
+    context_rows = [json.loads(line) for line in resumed.paths.context_log.read_text().splitlines()]
+    assert [row["step_index"] for row in context_rows] == [0, 1]
+    meta = json.loads(resumed.paths.run_meta.read_text())
+    assert meta["terminal_status"] == "completed"
+    assert meta["recovery_history"][0]["resumed_step"] == 1
+    assert "gateway lost" in meta["recovery_history"][0]["prior_error"]
+
+
+def test_resume_rejects_model_output_failure(tmp_path: Path) -> None:
+    chunks, orderings = _mini_fixtures(tmp_path)
+    cfg = _cfg()
+    run_generation(
+        config=cfg, llm=FakeLLM(responses=['<featureModel/>'], finish_reason="length"),
+        orderings_json=orderings, chunks_jsonl=chunks,
+        prompt_template_path=TEMPLATE, metamodel_xsd_text="<xs:schema/>",
+        results_root=tmp_path / "results",
+    )
+    with pytest.raises(ValueError, match="provider_error"):
+        run_generation(
+            config=cfg, llm=FakeLLM(), orderings_json=orderings,
+            chunks_jsonl=chunks, prompt_template_path=TEMPLATE,
+            metamodel_xsd_text="<xs:schema/>", results_root=tmp_path / "results",
+            resume_provider_failure=True,
+        )

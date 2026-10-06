@@ -1,4 +1,4 @@
-"""Tests for the Phase 6.6 run validator."""
+"""Tests for the run validator."""
 from __future__ import annotations
 
 import json
@@ -59,8 +59,8 @@ def _do_run(tmp_path: Path, **over) -> Path:
     result = run_generation(
         config=_cfg(**over),
         llm=FakeLLM(responses=[
-            '<?xml version="1.0"?><featureModel><struct><and name="R"/></struct><constraints/></featureModel>',
-            '<?xml version="1.0"?><featureModel><struct><and name="R"/></struct><constraints/></featureModel>',
+            '<?xml version="1.0"?><featureModel><struct><and name="R"><feature name="Child"/></and></struct><constraints/></featureModel>',
+            '<?xml version="1.0"?><featureModel><struct><and name="R"><feature name="Child"/></and></struct><constraints/></featureModel>',
         ]),
         orderings_json=orderings,
         chunks_jsonl=chunks,
@@ -82,6 +82,26 @@ def test_completed_run_passes_when_hashes_not_frozen(tmp_path: Path) -> None:
     assert report.complete, [f for f in report.findings]
 
 
+def test_xsd_admissibility_is_reported_separately(tmp_path: Path) -> None:
+    run_root = _do_run(tmp_path)
+    schema = tmp_path / "prompts/feature-model-schema.xsd"
+    schema.parent.mkdir(parents=True, exist_ok=True)
+    schema.write_text((REPO / "prompts/feature-model-schema.xsd").read_text())
+
+    invalid = (
+        '<?xml version="1.0"?><featureModel><struct><and name="R"/>'
+        '</struct><constraints/></featureModel>'
+    )
+    (run_root / "fm_gen.xml").write_text(invalid)
+    (run_root / "fm_iter/step_01.xml").write_text(invalid)
+
+    report = validate_run(run_root, repo_root=tmp_path)
+    assert report.execution_complete
+    assert not report.xsd_valid
+    assert not report.admissible
+    assert any(f.check == "xsd:fm_gen" for f in report.findings)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Presence failures
 # ─────────────────────────────────────────────────────────────────────────────
@@ -100,6 +120,36 @@ def test_missing_run_meta_is_error(tmp_path: Path) -> None:
     report = validate_run(run_root, repo_root=tmp_path)
     assert not report.complete
     assert any(f.check == "presence:run_meta.json" for f in report.findings)
+
+
+def test_incomplete_truncated_run_has_no_final_and_fails_validation(tmp_path: Path) -> None:
+    chunks, orderings = _mini_fixtures(tmp_path)
+    result = run_generation(
+        config=_cfg(),
+        llm=FakeLLM(responses=["<featureModel/>"] , finish_reason="length"),
+        orderings_json=orderings,
+        chunks_jsonl=chunks,
+        prompt_template_path=TEMPLATE,
+        metamodel_xsd_text=_MINI_XSD,
+        results_root=tmp_path / "results",
+    )
+    assert not result.paths.fm_gen.exists()
+    assert (result.paths.fm_iter_dir / "step_00.raw.txt").exists()
+    report = validate_run(result.paths.root, repo_root=tmp_path)
+    assert not report.complete
+    assert any(f.check == "status:run_incomplete" for f in report.findings)
+
+
+def test_validator_rejects_false_completed_flag(tmp_path: Path) -> None:
+    run_root = _do_run(tmp_path)
+    meta_path = run_root / "run_meta.json"
+    meta = json.loads(meta_path.read_text())
+    meta["steps"][0]["finish_reason"] = "length"
+    meta["steps"][0]["carry_forward"] = True
+    meta_path.write_text(json.dumps(meta))
+    report = validate_run(run_root, repo_root=tmp_path)
+    assert not report.complete
+    assert any(f.check.startswith("consistency:finish_step_") for f in report.findings)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
