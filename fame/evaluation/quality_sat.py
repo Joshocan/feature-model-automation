@@ -45,7 +45,8 @@ class _Encoder:
         return int(self.pool.id(name))
 
     def aux(self, prefix: str = "aux") -> int:
-        return int(self.pool.id(f"{prefix}_{self.pool.top + 1}"))
+        # Tuple namespace cannot collide with a legitimate feature named not_5.
+        return int(self.pool.id(("aux", prefix, self.pool.top + 1)))
 
     def add(self, *lits: int, label: str) -> None:
         self.clauses.append([int(l) for l in lits])
@@ -70,7 +71,7 @@ def _encode_tree(node: ET.Element, enc: _Encoder, *, parent_lit: Optional[int], 
 
     if parent_lit is not None and node_lit is not None:
         enc.add(-node_lit, parent_lit, label=f"Hierarchy: selecting '{node_name}' requires parent '{parent_name}'.")
-        if node.attrib.get("mandatory", "").lower() == "true":
+        if node.attrib.get("mandatory", "").lower() in {"true", "1"}:
             enc.add(-parent_lit, node_lit, label=f"Mandatory relation: selecting '{parent_name}' requires child '{node_name}'.")
 
     children = _named_children(node)
@@ -119,6 +120,8 @@ def _formula_lit(node: ET.Element, enc: _Encoder, *, label: str) -> int:
         name = (node.text or "").strip()
         if not name:
             raise ValueError("Empty <var> in constraint")
+        if name not in enc.features:
+            raise ValueError(f"Undeclared constraint variable: {name}")
         return enc.var(name)
     if tag == "not":
         if len(node) != 1:
@@ -129,9 +132,9 @@ def _formula_lit(node: ET.Element, enc: _Encoder, *, label: str) -> int:
         enc.add(aux, child, label=label)
         return aux
     if tag in {"conj", "disj"}:
-        if len(node) < 1:
-            raise ValueError(f"<{tag}> must have children")
-        lits = [_formula_lit(ch, enc, label=label) for ch in node if ch.tag in FORMULA_TAGS]
+        if len(node) != 2:
+            raise ValueError(f"<{tag}> must have exactly two children")
+        lits = [_formula_lit(ch, enc, label=label) for ch in node]
         if not lits:
             raise ValueError(f"<{tag}> contains no formula children")
         aux = enc.aux(tag)
@@ -181,9 +184,7 @@ def _encode_constraints(root: ET.Element, enc: _Encoder) -> None:
     if constraints is None:
         return
     for idx, rule in enumerate(constraints.findall("rule"), start=1):
-        formula_nodes = [ch for ch in rule if ch.tag in FORMULA_TAGS]
-        if not formula_nodes:
-            continue
+        formula_nodes = list(rule)
         if len(formula_nodes) != 1:
             raise ValueError("<rule> must contain exactly one formula root")
         label = _format_rule(rule, idx)
@@ -210,6 +211,14 @@ def _build_cnf(xml_path: Path) -> tuple[_Encoder, list[int]]:
     top = [ch for ch in struct if ch.tag in FEATURE_TAGS]
     if len(top) != 1:
         raise ValueError("Expected exactly one root feature/group in <struct>")
+
+    from fame.evaluation.structural import formula_counts
+    formula_counts(root)  # Reject unsupported/empty rules instead of silently dropping them.
+    names = [n.get("name") for n in struct.iter() if n.tag in FEATURE_TAGS]
+    if not all(names) or len(names) != len(set(names)):
+        raise ValueError("Missing or duplicate structural feature names")
+    if any((v.text or "").strip() not in names for v in root.findall("constraints//var")):
+        raise ValueError("Undeclared constraint variable")
 
     enc = _Encoder()
     root_node = _resolve_named_root(top[0])
