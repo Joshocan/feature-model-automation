@@ -1,0 +1,92 @@
+{
+  "specification_version": "0.1.0",
+  "status": "draft",
+  "created_at": "2026-09-26",
+  "timing": "post_generation_post_pilot_analysis",
+  "preregistered": false,
+  "campaign_id": "ifs-2027",
+  "documents": [
+    "docs/evaluation-spec.md",
+    "docs/metric-dictionary.md",
+    "docs/evaluation-decisions.md"
+  ],
+  "population": {
+    "unit": "planned_run",
+    "expected_planned_runs": 694,
+    "expected_by_lane": {"open_weight": 644, "astra": 50},
+    "matrices": [
+      "results/ifs-2027/protocol/run_matrix_open_weight.json",
+      "results/ifs-2027/protocol/run_matrix_astra.json"
+    ],
+    "pilot_manifest": "config/pilot_correctness_manifest.json",
+    "pool_pilots_with_main": false,
+    "group_keys": ["corpus", "provider", "model_id", "N", "grounding", "metamodel_block", "ordering_id", "k_doc", "arm"],
+    "retain_fields": ["run_id", "seed", "repetition", "temperature", "reasoning_effort", "max_output_tokens", "prompt_template_hash", "metamodel_hash", "chunks_hash", "encoder_digest"]
+  },
+  "source_sha256": {
+    "results/ifs-2027/protocol/run_matrix_open_weight.json": "566e1e33dafa99330a6f36f2039a0b0502f4fc3dbccab6b8296bc40b8f15ada9",
+    "results/ifs-2027/protocol/run_matrix_astra.json": "7021191ffbc4e1f5bb833d5b47fd56506554c5323e5fcba05f74127d68b63a32",
+    "results/ifs-2027/protocol/protocol.sha256": "b3840731b00ce7521e74d43e235662a84c3e29d70371750854fc2afa7eda655c",
+    "results/ifs-2027/protocol/resolved_experiment.json": "ae1b9b97d3cd9d1e642676c84f942a029fccea68454da624746dfcd6c6d3188e",
+    "config/pilot_correctness_manifest.json": "32e89997437c850dff83d27810fc4bd908335bd5eb5afb60e8f0c6ca76970fe1",
+    "results/pilot-correctness-analysis-2026-09-23/analysis_protocol.json": "a6c2da29945c3d81869c3d891d33b2c63d29b6282816d504a9a9b207ba4183f5"
+  },
+  "semantic": {
+    "encoder_model": "sentence-transformers/all-mpnet-base-v2",
+    "recorded_pilot_revision": "e8c3b32edf5434bc2275fc9bab85f82640a19130",
+    "encoder_verification_status": "pending_D03",
+    "recorded_pilot_implementation": "fame.evaluation.local_encoder.LocalTransformerEncoder",
+    "recorded_pilot_versions": {"transformers": "4.57.6", "torch": "2.8.0"},
+    "name_normalization": "none_raw_xml_name",
+    "include_root": true,
+    "include_abstract": true,
+    "preserve_duplicate_occurrences": true,
+    "similarity": "cosine",
+    "threshold_operator": ">=",
+    "tau_primary": 0.4,
+    "tau_sweep": [0.3, 0.4, 0.5, 0.6],
+    "primary_matching": "independent_max",
+    "sensitivity_matching": "one_to_one_maximum_cardinality_at_tau",
+    "alignment_tie_break": "reference_preorder_index",
+    "primary_recall_target": "reach",
+    "recall_targets": ["reach", "total", "attested", "organising"],
+    "f1_recall_target": "total",
+    "primary_score_population": "completed_extractable_final",
+    "sensitivity_score_population": "strict_admissible_final",
+    "candidate_score_populations": ["strict_admissible_final", "completed_extractable_final"]
+  },
+  "failure_policy": {
+    "retain_all_planned_runs": true,
+    "missing_metric_value": null,
+    "substitute_last_valid_checkpoint": false,
+    "provider_attempts_are_repetitions": false,
+    "metric_statuses": ["ok", "not_applicable", "ineligible", "missing_artifact", "unsupported", "evaluator_error"]
+  },
+  "structure": {
+    "root_depth": 0,
+    "count_xml_wrappers_in_depth": false,
+    "parent_denominator": "above_tau_nonroot_child_and_above_tau_parent_alignment",
+    "strict_admissibility_approved": false,
+    "w5_schema_mapping_approved": false,
+    "degeneracy": "no_or_no_alt_no_nonroot_mandatory"
+  },
+  "statistics": {
+    "comparison_test": "mann_whitney_u",
+    "multiplicity_method": "holm",
+    "effect_size": "cliffs_delta",
+    "confidence_level": 0.95,
+    "family_definitions": null,
+    "interval_method": null,
+    "minimum_n_policy": null,
+    "equivalence_margin": null,
+    "saturation_estimator": null,
+    "allow_equivalence_claim": false,
+    "allow_numeric_saturation_claim": false
+  },
+  "unresolved_decisions": ["D02", "D03", "D04", "D05"],
+  "execution": {
+    "generation_calls_authorized": false,
+    "current_drivers_enforce_contract": false,
+    "publication_freeze_allowed": false
+  }
+}
