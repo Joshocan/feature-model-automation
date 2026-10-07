@@ -213,12 +213,20 @@ def fill_workbook(wb,items,citations,rater):
     expected=['Read me first','Rating guide','1. Rate the models','2. Rank within domain','3. Check citations']
     if wb.sheetnames!=expected:raise ValueError('Use the v3 workbook, with no additional/hidden sheets')
     if any(s.sheet_state!='visible' for s in wb):raise ValueError('Hidden sheets not allowed')
-    if wb[expected[2]].max_row!=11 or wb[expected[4]].max_row!=13:raise ValueError('Wrong v3 row counts')
+    citation_sheet = wb[expected[4]]
+    modern = str(citation_sheet.cell(1, 9).value or '').strip().startswith('Does this evidence')
+    answer_cols = (9, 10) if modern else (7, 8)
+    if wb[expected[2]].max_row!=11 or citation_sheet.max_row<13:raise ValueError('Wrong v3 row counts')
     # Blank responses are mandatory; never silently erase an expert's work.
     for sheet,coords in [(expected[2],[(r,c) for r in range(2,12) for c in range(3,13)]),
-                         (expected[4],[(r,c) for r in range(2,14) for c in (7,8)]),
+                         (expected[4],[(r,c) for r in range(2,14) for c in answer_cols]),
                          (expected[3],[(r,4) for r in list(range(3,10))+list(range(13,20))])]:
         if any(wb[sheet].cell(r,c).value not in (None,'') for r,c in coords):raise ValueError('Workbook already contains responses')
+    if citation_sheet.max_row > 13:
+        raise ValueError('Remove extra citation-sheet rows from a COPY of the blank template before packing; source workbook is unchanged')
+    if modern and any(not item.get(k, '').strip() for item in citations
+                      for k in ('feature_description', 'source_link')):
+        raise ValueError('Current citation layout requires verified feature_description and source_link; refusing to produce incomplete packets')
     rng=random.Random(20261002+rater*101)
     corpora=list(common.CORPORA) if rater%2 else list(reversed(common.CORPORA))
     order=[]
@@ -234,6 +242,8 @@ def fill_workbook(wb,items,citations,rater):
         vals=[item['item_id'],item['code'],item['corpus'].title(),item['feature'],
               f'{item["doc_id"]} — {item["doc_title"]}',
               f'{item["excerpt"]}\n[{item["excerpt_origin"]}: {item["excerpt_locator"]}]']
+        if modern:
+            vals = vals[:4] + [item.get('feature_description', ''), vals[4], vals[5], item.get('source_link', '')]
         for col,value in enumerate(vals,1):wb[expected[4]].cell(row,col,value)
     wb.properties.creator='Study team';wb.properties.lastModifiedBy='Study team'
     wb.properties.title=f'Expert evaluation R{rater:02d}'
@@ -292,7 +302,7 @@ def main():
     b=sub.add_parser('pack',help='Build v3 workbooks: 10 ratings, 2 rankings, 12 citations')
     b.add_argument('--selection-dir',type=Path,required=True);b.add_argument('--citation-dir',type=Path,required=True)
     b.add_argument('--citation-items',type=Path,required=True)
-    b.add_argument('--form',type=Path,default=REPO/'data/Expert-evaluation-form-v3.xlsx')
+    b.add_argument('--form',type=Path,default=REPO/'data/Expert-evaluation-form.xlsx')
     b.add_argument('--raters',type=int,choices=[2,3],default=3)
     b.add_argument('--output',type=Path,required=True);b.set_defaults(func=pack)
     args=p.parse_args();args.func(args);return 0

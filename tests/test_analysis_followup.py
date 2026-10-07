@@ -35,8 +35,9 @@ def test_untestable_contrast_retains_holm_slot():
 
 def test_declared_families_match_planned_rows():
     root=Path(__file__).resolve().parents[1]
-    with (root/'results/ifs-2027/analysis/aggregate-current-v4/wide.csv').open() as f:
-        rows=list(csv.DictReader(f))
+    from scripts.build_run_matrix import build_matrix
+    rows = [dict(r, run_id=str(i), arm=r['extra']['arm'])
+            for i, r in enumerate(build_matrix('test-families', only_enabled=True)['runs'])]
     for name,count in [('A_grounding',20),('B_granularity',112),('C_ablation',50)]:
         d=json.loads((root/f'config/analysis/families/{name}.json').read_text())
         assert len(d['comparisons'])==count and d['tau_primary']==.4

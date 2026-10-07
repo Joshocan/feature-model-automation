@@ -6,9 +6,24 @@ from pathlib import Path
 import random
 import zipfile
 
-from openpyxl import load_workbook
+from openpyxl import load_workbook, Workbook
 import pytest
 from scripts import expert_artifacts_v3 as v
+
+
+@pytest.fixture
+def blank_form(tmp_path):
+    """Synthetic historical-layout fixture, containing no real study responses."""
+    wb = Workbook()
+    wb.remove(wb.active)
+    for name in ['Read me first', 'Rating guide', '1. Rate the models',
+                 '2. Rank within domain', '3. Check citations']:
+        wb.create_sheet(name)
+    wb['1. Rate the models'].cell(11, 1, 'placeholder')
+    wb['3. Check citations'].cell(13, 1, 'placeholder')
+    path = tmp_path / 'blank-form.xlsx'
+    wb.save(path)
+    return path
 
 
 def pool():
@@ -36,8 +51,8 @@ def fixtures():
     return items,citations
 
 
-def test_v3_workbook_columns_blanks_and_counterbalance():
-    items,rows=fixtures();form=v.REPO/'data/Expert-evaluation-form-v3.xlsx'
+def test_v3_workbook_columns_blanks_and_counterbalance(blank_form):
+    items,rows=fixtures();form=blank_form
     for rater,first in [(1,'Repair'),(2,'Federation'),(3,'Repair')]:
         wb=load_workbook(form);order=v.fill_workbook(wb,items,rows,rater)
         assert wb['1. Rate the models']['B2'].value==first
@@ -50,10 +65,24 @@ def test_v3_workbook_columns_blanks_and_counterbalance():
         assert {wb['2. Rank within domain'].cell(r,3).value for r in list(range(3,8))+list(range(13,18))}=={i['code'] for i in items}
 
 
-def test_completed_form_rejected():
-    items,rows=fixtures();wb=load_workbook(v.REPO/'data/Expert-evaluation-form-v3.xlsx')
+def test_completed_form_rejected(blank_form):
+    items,rows=fixtures();wb=load_workbook(blank_form)
     wb['3. Check citations']['G2']='Yes'
     with pytest.raises(ValueError,match='responses'):v.fill_workbook(wb,items,rows,1)
+
+
+def test_current_layout_answers_and_extra_rows_guard(blank_form):
+    items, rows = fixtures()
+    wb = load_workbook(blank_form)
+    sheet = wb['3. Check citations']
+    sheet.cell(1, 9, 'Does this evidence support the feature?')
+    sheet.cell(2, 9, 'Yes')
+    with pytest.raises(ValueError, match='responses'):
+        v.fill_workbook(wb, items, rows, 1)
+    sheet.cell(2, 9).value = None
+    sheet.cell(25, 5, 'Item')
+    with pytest.raises(ValueError, match='extra citation'):
+        v.fill_workbook(wb, items, rows, 1)
 
 
 def test_renderer_collapsible_and_trace_removed(tmp_path):
@@ -64,7 +93,7 @@ def test_renderer_collapsible_and_trace_removed(tmp_path):
     assert 'rep_01' not in page and 'Trace:' not in page
 
 
-def test_pack_roundtrip_and_identity_guard(tmp_path):
+def test_pack_roundtrip_and_identity_guard(tmp_path, blank_form):
     items,citations=fixtures()
     for i in items:
         xml=tmp_path/(i['code']+'.xml')
@@ -84,7 +113,7 @@ def test_pack_roundtrip_and_identity_guard(tmp_path):
     v.freeze_files(citation_dir,['citation_items_to_complete.csv','citation_key_AUTHOR_ONLY.csv','summary.json'])
     final=tmp_path/'final.csv';v.write_csv(final,citations)
     args=argparse.Namespace(selection_dir=selection,citation_dir=citation_dir,citation_items=final,
-        form=v.REPO/'data/Expert-evaluation-form-v3.xlsx',output=tmp_path/'packets',raters=2)
+        form=blank_form,output=tmp_path/'packets',raters=2)
     v.pack(args)
     from io import BytesIO
     for rater in ['R01','R02']:
