@@ -2,7 +2,10 @@
 
 **Protocol version:** 3.0, 2 October 2026. **Replaces:** v1.0 (29 September 2026), the
 blinded three-model preference design. **Status:** preparation. Do not dispatch until
-the gate in §6 passes. **Submission deadline:** 15 October 2026.
+the gate in §6 passes.
+
+**Documentation revision (7 October 2026):** removed the administrative schedule
+and clarified preparation inputs. The selection rule and analysis plan are unchanged.
 
 This study is an exploratory amendment designed after the automated results were
 known. It is reported as such and not as a prospectively registered comparison.
@@ -99,7 +102,7 @@ schema-invalid models that load in FeatureIDE. These are the cases E2 needs.
 
 ## 3. Instrument (workbook v3)
 
-`Expert-evaluation-form-v3.xlsx`. All input cells are yellow and constrained by
+`Expert-evaluation-form.xlsx` (renamed from the v3 filename). All input cells are yellow and constrained by
 drop-down lists. Model identities, run IDs, scores and reference models never appear.
 
 **Task 1. Rate each model (10 rows).** Rows are grouped by corpus. The order of the two
@@ -155,43 +158,69 @@ each stratum, so the draw is feasible; take the Astra edges from the extension o
 - **Instructions:** "Do not infer quality from size alone." Raters work independently
   and do not discuss the study before all workbooks are returned.
 
-## 6. Steps and timeline
+## 6. Preparation and replication
 
-### Implemented v3 preparation commands
+### Required inputs
 
-Run from the repository root. Each output directory must be new. These commands
-make no generation/API calls. The v1/v2 commands in the older strategy document
-are superseded. `build_expert_form.py` still reproduces the historical v2 form;
-do not use it to overwrite the supplied v3 workbook.
+The software repository provides the preparation scripts, not all study outputs.
+`results/` is intentionally Git-ignored: obtain the compatible **research-data
+archive** and restore its files to their original paths using
+[the reproduction guide](reproduce.md). Git-ignore prevents accidental commits;
+it does not prevent restored files from being used by the scripts. The data
+record is currently a draft; until a public DOI/version is recorded, request the
+compatible archive from the authors. Do not assume every expert-study input is
+already included in the non-expert release.
 
-1. Freeze the ten selected models and approved neutral codes:
+| Input | Expected location after restoration | Purpose |
+| --- | --- | --- |
+| Main-campaign inventory and saved run artefacts | `results/ifs-2027/analysis/inventory-current-v1/runs.json` and the campaign paths it identifies | Select the eligible campaign outputs |
+| Saved Astra extension runs | `results/expert-astra-n1-rag-v1/` | Select the two extension outputs without new model calls |
+| Main semantic pair scores | `results/ifs-2027/analysis/semantic-current-v3/pairs.csv` | Form the citation sampling pools |
+| Reference XMLs, attribution and document manifests | Original `data/` paths | Resolve reference matches and source identities |
+| Pinned evaluation encoder in the local cache, or saved extension pairs | See [semantic evaluation](semantic-evaluation.md); alternatively use `--astra-pairs PATH` | Score selected Astra features locally |
+| Reviewed blank instrument | `data/Expert-evaluation-form.xlsx` | Build the rating workbooks; never substitute a returned expert form |
+| Checked citation excerpts and source locators | A separately completed citation-items CSV | Populate the evidence shown to raters |
+
+Original source papers or authorised access may be needed to verify excerpts;
+their full texts are not guaranteed to be redistributed. Exact replication of
+the **dispatched packets**, rather than just model selection, requires the frozen
+selection, completed citation items, approved instrument, presentation settings
+and packet hashes. These must be released subject to rights and blinding review.
+If they are unavailable, state that limitation rather than inventing excerpts or
+claiming the packets were reproduced exactly.
+
+### Preparation procedure
+
+Run from the repository root after installing the release environment and
+restoring the inputs. Use new output directories, as below, to preserve the
+original study artefacts. These commands make no generation/API calls.
+
+**1. Select and freeze the sample.** Apply §2.2 and retain the selection hashes.
 
 ```bash
-./.venv/bin/python scripts/prepare_expert_artifacts.py select \
-  --output results/expert-study/selection-v3
+./.venv-release/bin/python scripts/prepare_expert_artifacts.py select \
+  --output results/expert-study/selection-reproduced-v3
 ```
 
-Defaults: campaign inventory-current-v1/runs.json and
-results/expert-astra-n1-rag-v1. The entire selection directory is author-only.
-It includes selection.json, expert_sample_frozen.csv, astra_attempts.csv and
-hashes.json. Selection compares frozen configurations except N (which deliberately
-differs), not semantic scores or XSD outcomes.
+The default inputs are listed above; override them with `--open-inventory` and
+`--astra-results` when needed. The selection directory contains the model-code
+key and remains author-only until responses are locked. Selection checks frozen
+configurations except `N`, not semantic scores or XSD outcomes.
 
-2. Draw citation items under §4:
+**2. Sample and verify citation evidence.** Draw items under §4, then have the
+excerpts and source identities independently checked.
 
 ```bash
-./.venv/bin/python scripts/prepare_expert_artifacts.py citations \
-  --selection-dir results/expert-study/selection-v3 \
-  --output results/expert-study/citations-v3
+./.venv-release/bin/python scripts/prepare_expert_artifacts.py citations \
+  --selection-dir results/expert-study/selection-reproduced-v3 \
+  --output results/expert-study/citations-reproduced-v3
 ```
 
-The default main pairs table is semantic-current-v3/pairs.csv. The Astra one-CSV
-export does not contain raw pair matrices, so this command computes similarities
-locally for the two selected Astra models using the pinned cached encoder. This
-can take time but involves no API calls. If raw extension pairs already exist,
-pass `--astra-pairs PATH`. It requires valid same-corpus document IDs and attested
-reference matches at tau=.4, excludes other edges, and keeps occurrence indices
-privately to disambiguate duplicate feature paths.
+Use `--pairs PATH` for a different restored main pairs location. The Astra summary
+CSV is not a raw pairs table: without `--astra-pairs`, the command computes the
+selected Astra similarities locally with the pinned encoder. It requires valid
+same-corpus document IDs and attested reference matches at τ = 0.4, and preserves
+occurrence indices to distinguish duplicate feature paths.
 
 Sampling uses uniform three-edge subsets in each corpus/stratum, rejecting the
 whole six-edge draw when any selected model contributes more than two edges.
@@ -199,10 +228,10 @@ This is uniform **conditional on the cap**, not unconstrained equal marginal
 inclusion probability for every edge. The fixed seed is 20261002. Insufficient
 pools or failure to find a valid draw stop rather than relax the sampling rule.
 
-Give the excerpt preparer ONLY `citation_items_to_complete.csv`. Keep
+Give the excerpt preparer only `citation_items_to_complete.csv`. Keep
 `citation_candidates_AUTHOR_ONLY.csv`, `citation_key_AUTHOR_ONLY.csv` and
 summary.json private: they reveal strata and model/run mappings. Preserve the
-blank CSV; save a separate `citation_items_final-v3.csv`, filling only:
+blank CSV; save a separate `citation_items_final-reproduced-v3.csv`, filling only:
 
 - excerpt
 - excerpt_origin (`retrieved chunk` or `document excerpt`)
@@ -212,41 +241,37 @@ blank CSV; save a separate `citation_items_final-v3.csv`, filling only:
 Do not change item IDs, codes, domains, features or document identities. All 12
 are required. The excerpt preparer must not inspect the private strata first.
 
-3. Build packets after evidence completion and second-researcher checks:
+**3. Assemble and inspect packets.** Use the checked citation file and a reviewed
+blank form compatible with the packet builder.
 
 ```bash
-./.venv/bin/python scripts/prepare_expert_artifacts.py pack \
-  --selection-dir results/expert-study/selection-v3 \
-  --citation-dir results/expert-study/citations-v3 \
-  --citation-items results/expert-study/citation_items_final-v3.csv \
-  --form data/Expert-evaluation-form-v3.xlsx \
-  --output results/expert-study/packets-v3
+./.venv-release/bin/python scripts/prepare_expert_artifacts.py pack \
+  --selection-dir results/expert-study/selection-reproduced-v3 \
+  --citation-dir results/expert-study/citations-reproduced-v3 \
+  --citation-items results/expert-study/citation_items_final-reproduced-v3.csv \
+  --form data/Expert-evaluation-form.xlsx \
+  --output results/expert-study/packets-reproduced-v3
 ```
 
-Default three raters; `--raters 2` creates two. Each ZIP contains ten collapsible
-HTML models, the workbook with ten rating rows, two five-model ranking blocks,
-twelve citation rows, a source index and instructions. No triplets or repeats.
-Corpus block order alternates across raters; model order and citation order are
-seeded per rater. Citation judgement/reason cells stay blank. Prior responses,
-hidden/extra sheets, changed frozen files or changed sampled identities are
-rejected. Comments (including author metadata) are removed from packet copies,
-not from the source workbook. A/B/C choice sheets and Rater details from v2 are not used.
-Keep AUTHOR_ONLY private and run the pilot/dispatch gate below: machine checks
-do not replace independent inspection of source text, rendering and blinding.
+The default is three raters; use `--raters 2` for two. Corpus block order alternates;
+model and citation orders are seeded per rater. Keep `AUTHOR_ONLY` outside the
+dispatched packets. The builder removes comments from packet copies, not the
+source form, and rejects incomplete evidence or incompatible templates. In
+particular, the current ten-column citation layout requires verified feature
+descriptions and source links, and extra citation-sheet rows must be reviewed in
+a copy of the blank instrument. The four excerpt fields alone do not guarantee
+that every instrument revision can be packed; do not bypass validation failures.
 
-| Date | Step |
-| --- | --- |
-| Thu 2 Oct | Freeze this protocol, the workbook and the selection output; record hashes. |
-| Fri 3 Oct | Draw the citation items (§4); a researcher selects excerpts, a second checks them. Build the packets: the existing `pack` command with a 10-row Task 1, a ranking sheet and 12 citation rows. |
-| Fri 3 Oct | **Pilot** with one non-study reader on one compact and one large model. Fix wording, then version the workbook. |
-| Sat 4 Oct | **Dispatch gate:** each packet has 10 model files matching 10 Task 1 rows, both corpus blocks, 5 + 5 ranking rows whose codes appear in Task 1, 12 citation rows and no identifying information. Record packet hashes. Send. |
-| Thu 9 Oct | Responses due. Validate values, lock the data, then unblind. |
-| Fri 10 – Sat 11 Oct | Analysis (§7); write §5.5 (half a page) and update the abstract. |
-| Mon 13 – Tue 14 Oct | Final pass. |
+**Dispatch gate:** inspect all ten rendered models, ten rating rows, two five-model
+ranking blocks and twelve citation items. Verify source excerpts, blank answer
+cells and absence of model identities or hidden keys. Pilot one compact and one
+large model with a non-study reader, version any wording changes, and record
+the final packet hashes. Automated checks do not replace this inspection.
 
-**Fallback:** if fewer than two complete workbooks arrive by 9 October, submit without
-§5.5, restrict the claims to reference agreement, and describe the study as ongoing
-under Threats to Validity.
+**4. Lock and analyse responses.** Validate returned values, preserve originals
+privately, prepare de-identified analysis records, lock the data and only then
+unblind. Follow §7. If fewer than two complete workbooks are available, report
+that limitation and do not present the planned multi-rater analysis as complete.
 
 ## 7. Analysis plan (frozen with this protocol)
 
@@ -275,7 +300,7 @@ All analyses are descriptive. Small samples, no corrected significance claims.
 | --- | --- | --- |
 | Primary outcome: blinded three-way model preference | Primary outcome: within-corpus ranking compared with each matching policy | The paper is about evaluation conventions, not model ranking |
 | `N = 1` only | `N = 1` and `N = 10` | At `N = 1` the two matching policies largely agree, so they cannot be told apart |
-| 24 models, 8 triplets, 2 repeats, 15 citation items | 10 models, 2 rankings, 12 citation items | Burden from about 4–5 h to about 2 h 20 min, feasible before 15 October |
+| 24 models, 8 triplets, 2 repeats, 15 citation items | 10 models, 2 rankings, 12 citation items | Reduced estimated burden from about 4–5 h to about 2 h 20 min |
 | Citation items balanced by model | Citation items stratified by hidden agreement with the reference | Tests the RQ4 finding directly |
 | Q1 includes redundancy | Q5 redundancy separate | Tests whether experts penalise what independent-max rewards |
 | Astra `N = 1` extension as a model in a leaderboard | Astra `N = 1` as the readable over-producer | Same runs, different role |
