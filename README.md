@@ -1,145 +1,73 @@
 # Feature Model Automation
 
-Evaluation implementation: [specification v0.1.0](docs/evaluation-spec.md),
-[metric dictionary](docs/metric-dictionary.md), and
-[open decisions](docs/evaluation-decisions.md). This post-generation draft is not
-yet frozen; it does not change the campaign protocol or enable generation calls.
-The [run inventory guide](docs/run-inventory.md) documents the read-only artifact audit.
-The [structural evaluation guide](docs/structural-evaluation.md) describes
-offline XML, schema, hierarchy, variability and SAT diagnostics and their limitations.
-For the current manual, offline evaluation sequence and denominator checks, see the
-[evaluation runbook](docs/evaluation-runbook.md). No campaign evaluation runs automatically.
+Replication software for **Conformance Is Not Correctness: Evaluating
+LLM-Constructed Feature Models**. The Python package is named `fame`.
 
-> **⚠️ SUPERSEDED — this README describes the retired 2×2 pipeline design.**
-> The active plan is [IFS_2027_EXPERIMENT.md](IFS_2027_EXPERIMENT.md), which replaces the four SS/IS×RAG/Non-RAG pipelines with a single N-granularity engine. A full rewrite of this README is pending. The text below is kept only for orientation while the migration is in flight.
+The current pipeline uses one N-batch generation engine, RAG or Non-RAG grounding,
+and optional metamodel guidance. It does not use the retired SS/IS four-pipeline
+design or LangChain orchestration.
 
----
+## Release status
 
-This repository contains the feature-model automation experiments formerly developed within FAME. It builds FeatureIDE-compatible feature models from textual artefacts using four LLM pipeline families. The internal Python package remains `fame` to preserve the existing module imports and experiment commands.
+This is a release candidate, not a certified reproduction release. See
+[release checklist](docs/software-release-checklist.md) for unresolved gates.
+The final version and DOI must be settled before publication.
 
-- `ss_nonrag` — single-stage prompt-based context conditioning
-- `is_nonrag` — iterative prompt-based context conditioning
-- `ss_rag` — single-stage retrieval-augmented generation
-- `is_rag` — iterative retrieval-augmented generation
+## Licence
 
-For the paper-specific reproduction workflow, see:
+The software is licensed under the [MIT License](LICENSE).
+Copyright (c) 2026 Joshua Tetteh Ocansey, Yngve Lamo, Adrian Rutle, Fazle Rabbi.
+The separate research-data archive remains CC BY 4.0; its notices and templates
+under `docs/data-release/` retain that scope. Third-party material retains its
+own notices and licences and is not relicensed by this software licence.
 
-- `IFS_2027_EXPERIMENT.md` (iFS @ ETAPS 2027 experiment guide)
+## Start here
 
-## 1) Initial setup
+1. [Install and test](SETUP.md).
+2. [Restore data and reproduce results](docs/reproduce.md).
+3. Read the [experiment protocol](IFS_2027_EXPERIMENT.md),
+   [evaluation specification](docs/evaluation-spec.md) and
+   [metric dictionary](docs/metric-dictionary.md).
 
-- See `SETUP.md` for full setup details.
-- macOS/Linux quick start:
+## Maintained entry points
 
-```bash
-./scripts/initial_setup.sh
-```
+| Task | Scripts |
+|---|---|
+| Corpus preparation (requires source papers) | `build_chunks.py`, `build_index.py` |
+| Generation (paid provider calls) | `build_run_matrix.py`, `campaign.py`, `smoke_run.py` |
+| Inventory and conformance | `inventory_campaign.py`, `evaluate_structure.py`, `evaluate_featureide.py` |
+| Semantics and provenance | `evaluate_semantic.py`, `evaluate_provenance.py` |
+| Matching/hierarchy sensitivity | `tau_rescore.py`, `compare_matching.py`, `evaluate_siblings.py` |
+| Aggregation/statistics | `aggregate_campaign.py`, `analyse_family.py`, `verify_evaluation_outputs.py` |
+| Paper figures | `plot_paper_figures.py` |
+| Data verification/restoration | `restore_research_data.py` |
 
-For stable runs, keep the Python environment outside OneDrive. A typical setup is:
+Scripts are under `scripts/`; run them from the repository root. Use `--help`
+for current arguments. Generation is never necessary to recompute metrics from
+saved XML. Never launch generation as an installation or reproduction smoke test.
 
-```bash
-python3 -m venv $HOME/.venvs/fame
-source $HOME/.venvs/fame/bin/activate
-PYTHONNOUSERSITE=1 python -m pip install --upgrade pip
-PYTHONNOUSERSITE=1 python -m pip install -r config/requirements.txt
-```
+## Data and scope
 
-All commands below assume:
+Large outputs belong in the separate `feature-model-research-data` archive.
+The main campaign contains 694 planned runs and 500 completed outputs; pilots,
+recovery snapshots and the Astra N=1 expert extension are separate populations.
+Completion, structural conformance, FeatureIDE acceptance and semantic correctness
+are different outcomes. Primary semantic comparisons use completed extractable
+outputs; strict admissibility is a separate sensitivity analysis.
 
-```bash
-source $HOME/.venvs/fame/bin/activate
-export PYTHONNOUSERSITE=1
-export PYTHONPATH=$(pwd)
-```
+`results/`, credentials, processed corpus text, vector indexes and local environments
+are excluded from Git. Do not publish a ZIP of the entire working directory.
+Do not place returned expert forms or identity keys in the software repository.
 
-## 2) End-to-end launcher
+The expert packet generator supports historical and current citation layouts,
+but the tracked form retains extra source-table rows. It must be reviewed and
+prepared as a separate blank copy before generating new packets; it is not a
+returned-response extractor. Expert-response analysis remains out of this release's scope.
 
-Runs optional preprocessing, then lets you pick RAG / Non-RAG and SS / IS variants.
+## Reproducibility limits
 
-```bash
-python scripts/run_fame.py
-```
-
-## 3) Run individual steps
-
-### Preprocessing (ingest + vectorize)
-
-```bash
-python scripts/preprocessing_for_rag.py
-```
-
-### Single-stage Non-RAG
-
-```bash
-python scripts/run_ss_nonrag.py --interactive
-```
-
-### Iterative Non-RAG
-
-```bash
-python scripts/run_is_nonrag.py --interactive
-```
-
-### Single-stage RAG
-
-```bash
-python scripts/run_ss_rag.py --interactive
-```
-
-### Iterative RAG
-
-```bash
-python scripts/run_is_rag.py --interactive
-```
-
-## 4) Evaluation helpers
-
-Coverage for a single FM:
-
-```bash
-python scripts/coverage_fm.py \
-  --gt data/ground_truth/federation.xml \
-  --pred results/rag/ss-rgfm/fm/your_model.xml
-```
-
-Well-formedness / XSD conformance:
-
-```bash
-python scripts/check_wellformed.py \
-  --xml results/rag/ss-rgfm/fm/your_model.xml \
-  --xsd prompts/specifications/feature_model_featureide.xsd
-```
-
-Duplicate feature names:
-
-```bash
-python scripts/check_feature_duplicates.py \
-  --xml results/rag/ss-rgfm/fm/your_model.xml
-```
-
-## 5) Outputs and directories
-
-Main output locations:
-
-- generated FMs: `results/**/fm/`
-- pipeline reports / metadata: `results/**/reports/`
-- top-ranked FMs: `results/**/top_fm/`
-- overall analysis datasets: `results/analysis/`
-- curated final FMs: `final_fm/`
-
-## 6) Environment notes
-
-- Chroma database defaults to:
-  - `data/chroma_db`
-- Ollama embedding default:
-  - `OLLAMA_EMBED_MODEL=nomic-embed-text`
-- evaluation embedding default:
-  - `all-mpnet-base-v2`
-
-If the repository is stored under OneDrive, keep at least these outside OneDrive:
-
-- Python virtual environments
-- Chroma persistent storage
-- temporary runtime / analysis copies
-
-For more setup detail, read `SETUP.md`.
+Use the recorded encoder revision and versions, not the latest embedding model.
+FeatureIDE has a separately pinned JAR; see [its guide](docs/featureide-evaluation.md).
+Source texts and indexes are needed only to rebuild generation inputs and may
+require separate access rights. New stochastic LLM runs are not promised to
+produce identical bytes. A clean test suite alone does not verify every paper table.
