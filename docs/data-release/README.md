@@ -54,7 +54,11 @@ This preparation has not performed a clean-environment scientific recomputation.
 
 ## Restrictions and release timing
 
-No licence has been assigned yet. Source-paper PDFs, processed chunks and vector
+Original contributions are licensed under CC BY 4.0; see LICENSE.md and
+LICENSES/README.md for scope and third-party exclusions. Copyright 2026 Joshua
+Tetteh Ocansey, Yngve Lamo, Adrian Rutle, Fazle Rabbi. This licence choice does not
+constitute publication approval: see RELEASE_APPROVAL.md for the pending gates.
+Source-paper PDFs, processed chunks and vector
 indexes are omitted pending redistribution review. The corpus manifests retain
 document identities and source links. Generated descriptions may quote papers;
 omitting PDFs does not automatically clear every output for redistribution.

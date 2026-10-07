@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "Please cite this dataset and the compatible companion software release."
+type: dataset
+title: "Feature-model research data"
+authors:
+  - family-names: Ocansey
+    given-names: Joshua Tetteh
+  - family-names: Lamo
+    given-names: Yngve
+  - family-names: Rutle
+    given-names: Adrian
+  - family-names: Rabbi
+    given-names: Fazle
+license: CC-BY-4.0
+# Add the actual DOI, release version, publication date and verified ORCIDs when available.

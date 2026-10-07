@@ -17,8 +17,9 @@ not that every methodological or publication question is resolved.
 
 ## Publication gates requiring further evidence or author decisions
 
-- [ ] Confirm authors/order/ORCIDs and final dataset title; complete CITATION.cff.
-- [ ] Approve licence(s), third-party permissions and any required exclusions.
+- [x] Record user-supplied author names/order and CC BY 4.0 in CITATION.cff and LICENSE.md.
+- [ ] Confirm final dataset title and optional ORCIDs/DOI before deposition.
+- [ ] Complete third-party permissions review and any required exclusions.
 - [ ] Review personal absolute paths, generated quotations and scan findings.
 - [ ] Approve release timing without compromising active expert blinding.
 - [ ] Review missing historical prompt snapshots and disclose any unrecoverable ones.
@@ -31,4 +32,5 @@ not that every methodological or publication question is resolved.
 
 No expert analysis is required to describe this explicitly non-expert release.
 Missing expert evidence must not be represented as an assessed outcome.
-Licensing and authorship are not inferred from workstation names or historical PDFs.
+See RELEASE_APPROVAL.md and its linked documents for evidence and pending decisions.
+Licensing and authorship were supplied by the user, not inferred from workstation names.
