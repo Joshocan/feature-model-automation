@@ -1,0 +1,10 @@
+{
+  "status": "local candidate, not a published dataset version",
+  "dataset_title": "Feature-model research data",
+  "doi": null,
+  "manifest_sha256": "e10a547b59701b614558bbc1433d0c0b51f9124b1d02aa958a301fddb8614b0d",
+  "main_planned_runs": 694,
+  "main_completed_runs": 500,
+  "expert_responses_included": false,
+  "note": "Refresh compatibility metadata if the archive manifest changes before release."
+}
