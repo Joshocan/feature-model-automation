@@ -1,0 +1,4 @@
+# Optional corpus rebuilding; source-paper access is required separately.
+-r requirements.txt
+unstructured[pdf]
+python-magic

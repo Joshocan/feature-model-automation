@@ -1,4 +1,5 @@
-# Core
+# Direct runtime dependencies; use a tested platform lock for release installation.
+numpy
 nltk
 lxml
 xmlschema
@@ -13,26 +14,20 @@ PyYAML
 Jinja2
 six
 tiktoken
-fastapi>=0.110,<0.116
-starlette>=0.36,<0.47
-pydantic>=2.6,<2.11
-uvicorn>=0.23,<0.31
-# python-docx
 
 # Evaluation / embeddings
 scipy>=1.9,<2
-sentence-transformers>=2.6.0
+transformers==4.57.6
+torch==2.8.0
+tokenizers==0.22.2
+huggingface-hub==0.36.2
+safetensors
 python-sat==1.9.dev15
 matplotlib>=3.8,<4
 
-# Chroma + LangChain
+# Retrieval (the current pipeline does not use LangChain)
 chromadb
-langchain-core
-langchain-community
-langchain-text-splitters
-langchain-chroma
-langchain-ollama
 
-# Optional but used by many loaders/pipelines
-unstructured
-python-magic
+# PDF ingestion: install config/requirements-ingestion.txt separately.
+# Optional legacy similarity helpers need a compatible sentence-transformers.
+# Primary semantic evaluation uses LocalTransformerEncoder instead.

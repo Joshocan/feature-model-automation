@@ -4,6 +4,10 @@ __pycache__/
 *$py.class
 *.so
 .venv/
+.venv-release/
+.pytest_cache/
+tools/featureide/lib/
+tools/featureide/*.class
 venv/
 env/
 build/
