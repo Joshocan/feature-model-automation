@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "Please cite this software and its compatible research-data archive."
+type: software
+title: "Feature Model Automation"
+authors:
+  - family-names: Ocansey
+    given-names: Joshua Tetteh
+  - family-names: Lamo
+    given-names: Yngve
+  - family-names: Rutle
+    given-names: Adrian
+  - family-names: Rabbi
+    given-names: Fazle
+license: MIT
+# Final version, publication date and DOI remain unset until confirmed.
