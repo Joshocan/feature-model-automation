@@ -54,17 +54,18 @@ def restore(archive, destination, apply=False, expected_manifest=None):
             raise ValueError('Original artifact checksum mismatch: ' + record['path'])
         # Software, prompts and configuration come from the compatible software
         # release, not historical copies embedded in the data archive.
-        if PurePosixPath(record['source']).parts[0] not in ('data', 'results'):
-            continue
-        target = safe_path(destination, record['source'])
-        if target in targets:
-            raise ValueError('Duplicate restore target: ' + record['source'])
-        targets.add(target)
-        if target.exists():
-            if not target.is_file() or sha(target) != record['sha256']:
-                raise ValueError('Refusing to overwrite differing file: ' + str(target))
-        else:
-            plan.append((source, target, record['sha256']))
+        for original in [record['source'], *record.get('restore_sources', [])]:
+            if PurePosixPath(original).parts[0] not in ('data', 'results'):
+                continue
+            target = safe_path(destination, original)
+            if target in targets:
+                raise ValueError('Duplicate restore target: ' + original)
+            targets.add(target)
+            if target.exists():
+                if not target.is_file() or sha(target) != record['sha256']:
+                    raise ValueError('Refusing to overwrite differing file: ' + str(target))
+            else:
+                plan.append((source, target, record['sha256']))
     if apply:
         for source, target, digest in plan:
             target.parent.mkdir(parents=True, exist_ok=True)

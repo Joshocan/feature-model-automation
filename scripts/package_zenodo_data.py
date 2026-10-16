@@ -43,7 +43,7 @@ def package(root, output):
         raise ValueError('Archive reports technical validation failures')
     print(f'Verified {len(expected)} files; building ZIP.', flush=True)
     output.mkdir(parents=True)
-    archive = output / 'feature-model-research-data-2026-10-07-candidate.zip'
+    archive = output / 'feature-model-research-data.zip'
     with zipfile.ZipFile(archive, 'x', compression=zipfile.ZIP_DEFLATED,
                          compresslevel=6, allowZip64=True) as z:
         for name in sorted(expected):
@@ -64,15 +64,15 @@ def package(root, output):
     readme = output / 'README.md'
     with readme.open('x') as f:
         f.write('# Conformance Is Not Correctness: Evaluating LLM-Constructed Feature Models — Research Data\n\n')
-        f.write('Local upload candidate prepared 2026-10-07. Not yet publication-approved.\n\n')
+        f.write('Research-data upload candidate. See RELEASE_APPROVAL.md inside for publication status.\n\n')
         f.write('## Download verification and extraction\n\n')
         f.write('Keep these three files together. Verify with `shasum -a 256 -c SHA256SUMS`,\n')
         f.write('then extract the ZIP into a new directory. Inside `feature-model-research-data/`,\n')
         f.write('run `shasum -a 256 -c checksums.sha256` to verify the extracted contents.\n\n')
-        f.write('The ZIP excludes Git history, preparation backups, old bundles and the\n')
-        f.write('expert-study directory. It includes automated Astra expert-extension outputs,\n')
-        f.write('not expert responses or analysis. No release version or DOI has been assigned\n')
-        f.write('by this packaging operation. Review RELEASE_APPROVAL.md before publishing.\n\n')
+        f.write('The ZIP excludes Git history, preparation backups, old bundles and private\n')
+        f.write('expert workbooks. Only expert-study files listed in protocol/public-expert-files.json\n')
+        f.write('are eligible for packaging. This allowlist is technical scope, not participant consent\n')
+        f.write('or publication approval. Review RELEASE_APPROVAL.md before publishing.\n\n')
         f.write('The README below is also preserved inside the ZIP.\n\n---\n\n')
         f.write((root / 'README.md').read_text())
     with (output / 'SHA256SUMS').open('x') as f:

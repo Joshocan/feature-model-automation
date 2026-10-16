@@ -48,9 +48,12 @@ def csv_export(root, name, rows, fields):
 
 
 def release_files(root):
+    approval = root / 'protocol/public-expert-files.json'
+    expert_files = set(read(approval)['files']) if approval.exists() else set()
     return sorted(p for p in root.rglob('*') if p.is_file()
-                  and not any(part in ('.git', 'bundles', 'reorganisation-backup', 'release-preparation-backup', 'expert-study')
+                  and not any(part in ('.git', 'bundles', '.release-history', 'reorganisation-backup', 'release-preparation-backup')
                               for part in p.relative_to(root).parts)
+                  and ('expert-study' not in p.relative_to(root).parts or p.relative_to(root).as_posix() in expert_files)
                   and not p.name.startswith('~$') and p.name != '.DS_Store')
 
 
@@ -63,7 +66,7 @@ def refresh_metadata(root):
     manifest = read(root / 'artifact-manifest.json')
     original_paths = {r['path'] for r in manifest['files']}
     manifest['derived_files'] = [dict(path=p.relative_to(root).as_posix(), bytes=p.stat().st_size,
-        sha256=digest(p), provenance='non-expert release preparation; see recovery and lineage reports')
+        sha256=digest(p), provenance='release preparation; see recovery and lineage reports')
         for p in release_files(root) if p.relative_to(root).as_posix() not in original_paths
         and p.name not in ('artifact-manifest.json', 'checksums.sha256')]
     manifest['release_preparer_sha256'] = digest(Path(__file__))
