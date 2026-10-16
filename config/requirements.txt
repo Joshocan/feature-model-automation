@@ -17,6 +17,7 @@ tiktoken
 
 # Evaluation / embeddings
 scipy>=1.9,<2
+krippendorff==0.8.2
 transformers==4.57.6
 torch==2.8.0
 tokenizers==0.22.2

@@ -1,10 +1,12 @@
 {
-  "status": "local candidate, not a published dataset version",
+  "status": "updated public-analysis candidate; final author approval and software release pending",
   "dataset_title": "Feature-model research data",
-  "doi": null,
-  "manifest_sha256": "e10a547b59701b614558bbc1433d0c0b51f9124b1d02aa958a301fddb8614b0d",
+  "doi": "10.5281/zenodo.23206866",
+  "doi_status": "reserved draft; not a claim of publication",
+  "manifest_sha256": "85086379ef413386a873fb1b2bca34295e726b44e28e4a1c2bfa44fed3637f45",
   "main_planned_runs": 694,
   "main_completed_runs": 500,
-  "expert_responses_included": false,
+  "expert_responses_included": true,
+  "expert_response_format": "anonymised numeric CSVs; private workbooks excluded",
   "note": "Refresh compatibility metadata if the archive manifest changes before release."
 }

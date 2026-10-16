@@ -109,7 +109,7 @@ def inflation(wide, scores, out):
     ax.minorticks_off()
     ax.text(1.03,.96,'reference size',transform=ax.get_xaxis_transform(),rotation=90,
             va='top',ha='left',fontsize=7,color='.4')
-    ax.text(.03,.67,f'Spearman ρ = {rho:.3f}\nn = {len(data)}',transform=ax.transAxes,va='top')
+    ax.text(.03,.67,f'Spearman $r_s$ = {rho:.3f}\nn = {len(data)}',transform=ax.transAxes,va='top')
     ax.legend(frameon=False,fontsize=7,loc='upper left')
     save(fig,out,'fig_inflation',data)
     return dict(n=len(data),spearman_rho=rho,excluded_zero_denominator=excluded,
